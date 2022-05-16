@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <vector>
+#include <iostream>
 
 DataAssociation::DataAssociation() : score_threshold_(0.1)
 {
@@ -262,6 +263,7 @@ bool DataAssociation::assign(
   const Eigen::MatrixXd & src, std::unordered_map<int, int> & direct_assignment,
   std::unordered_map<int, int> & reverse_assignment)
 {
+  std::cout<<src<<std::endl;
   std::vector<std::vector<double>> score(src.rows());
   for (int row = 0; row < src.rows(); ++row) {
     score.at(row).resize(src.cols());
@@ -295,6 +297,44 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
   const autoware_auto_perception_msgs::msg::DetectedObjects & object0,
   const autoware_auto_perception_msgs::msg::DetectedObjects & object1)
 {
+  /*
+  比如obj0 size:3,obj1 size:7.形成一个7 x 3矩阵.相似类别才可以去计算score.
+    0        0        0
+    0        0        0
+    0        0        0
+    0        0        0
+    0.989982        0        0
+    0 0.985647        0
+    0        0 0.992168
+  */
+  std::cout<<"object0 size:"<<object0.objects.size()<<std::endl;
+  for(auto obj:object0.objects)
+  {
+    // constant definitions
+    // template<typename ContainerAllocator>
+    // constexpr uint8_t ObjectClassification_<ContainerAllocator>::UNKNOWN; 0
+    // template<typename ContainerAllocator>
+    // constexpr uint8_t ObjectClassification_<ContainerAllocator>::CAR; 1
+    // template<typename ContainerAllocator>
+    // constexpr uint8_t ObjectClassification_<ContainerAllocator>::TRUCK;2
+    // template<typename ContainerAllocator>
+    // constexpr uint8_t ObjectClassification_<ContainerAllocator>::BUS;3
+    // template<typename ContainerAllocator>
+    // constexpr uint8_t ObjectClassification_<ContainerAllocator>::TRAILER;4
+    // template<typename ContainerAllocator>
+    // constexpr uint8_t ObjectClassification_<ContainerAllocator>::MOTORCYCLE;5
+    // template<typename ContainerAllocator>
+    // constexpr uint8_t ObjectClassification_<ContainerAllocator>::BICYCLE;6
+    // template<typename ContainerAllocator>
+    // constexpr uint8_t ObjectClassification_<ContainerAllocator>::PEDESTRIAN;7
+    std::cout<<int(obj.classification.front().label)<<std::endl;
+  }
+  std::cout<<"object1 size:"<<object1.objects.size()<<std::endl;
+  for(auto obj:object1.objects)
+  {
+    std::cout<<int(obj.classification.front().label)<<std::endl;
+  }
+  
   Eigen::MatrixXd score_matrix =
     Eigen::MatrixXd::Zero(object1.objects.size(), object0.objects.size());
   for (size_t object1_idx = 0; object1_idx < object1.objects.size(); ++object1_idx) {
