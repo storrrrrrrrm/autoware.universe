@@ -55,6 +55,7 @@ using geometry_msgs::msg::Twist;
 using nav_msgs::msg::Odometry;
 using tier4_planning_msgs::msg::Scenario;
 
+//判断scenario是不是parking模式
 bool isActive(const Scenario::ConstSharedPtr & scenario)
 {
   if (!scenario) {
@@ -112,6 +113,7 @@ size_t getNextTargetIndex(
   return trajectory_size - 1;
 }
 
+//获取部分Trajectory,其实就是选取部分waypoints
 Trajectory getPartialTrajectory(
   const Trajectory & trajectory, const size_t start_index, const size_t end_index)
 {
@@ -136,12 +138,14 @@ Trajectory getPartialTrajectory(
   return partial_trajectory;
 }
 
+//计算pose和trajectory上最近的点的距离
 double calcDistance2d(const Trajectory & trajectory, const Pose & pose)
 {
   const auto idx = tier4_autoware_utils::findNearestIndex(trajectory.points, pose.position);
   return tier4_autoware_utils::calcDistance2d(trajectory.points.at(idx), pose);
 }
 
+//把pose从一个坐标系转换到另一个坐标系
 Pose transformPose(const Pose & pose, const TransformStamped & transform)
 {
   PoseStamped transformed_pose;
@@ -152,6 +156,7 @@ Pose transformPose(const Pose & pose, const TransformStamped & transform)
   return transformed_pose.pose;
 }
 
+//一个trajectory其实就是一些waypoint点的集合.
 Trajectory createTrajectory(
   const PoseStamped & current_pose, const PlannerWaypoints & planner_waypoints,
   const double & velocity)
@@ -305,6 +310,7 @@ void FreespacePlannerNode::getAstarParam()
   p.distance_heuristic_weight = declare_parameter("astar.distance_heuristic_weight", 1.0);
 }
 
+//设置目标终点
 void FreespacePlannerNode::onRoute(const HADMapRoute::ConstSharedPtr msg)
 {
   route_ = msg;
@@ -403,6 +409,7 @@ void FreespacePlannerNode::updateTargetIndex()
   }
 }
 
+//入口逻辑,定时器
 void FreespacePlannerNode::onTimer()
 {
   // Check all inputs are ready
@@ -456,6 +463,7 @@ void FreespacePlannerNode::onTimer()
   debug_partial_pose_array_pub_->publish(trajectory2PoseArray(partial_trajectory_));
 }
 
+//核心逻辑 实际上调用的是algo_中的函数
 void FreespacePlannerNode::planTrajectory()
 {
   // Extend robot shape
