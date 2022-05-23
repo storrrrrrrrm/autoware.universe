@@ -304,6 +304,7 @@ void CostmapGenerator::onTimer()
   }
 
   // Get current pose
+  // 获取costmap_frame_(map)到vehicle_frame_(base_link)的变换
   geometry_msgs::msg::TransformStamped tf;
   try {
     tf = tf_buffer_.lookupTransform(
@@ -314,6 +315,7 @@ void CostmapGenerator::onTimer()
   }
 
   // Set grid center
+  // 把grid的中心设置为车身在costmap_frame_(map)坐标系下所在位置.
   grid_map::Position p;
   p.x() = tf.transform.translation.x;
   p.y() = tf.transform.translation.y;
@@ -377,7 +379,7 @@ grid_map::Matrix CostmapGenerator::generatePointsCostmap(
   } catch (const tf2::TransformException & ex) {
     RCLCPP_ERROR(rclcpp::get_logger("costmap_generator"), "%s", ex.what());
   }
-
+  //lidar坐标系下的点转换到costmap_frame_(map)坐标系
   const auto transformed_points = getTransformedPointCloud(*in_points, points2costmap.transform);
 
   grid_map::Matrix points_costmap = points2costmap_.makeCostmapFromPoints(
