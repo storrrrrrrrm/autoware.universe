@@ -69,8 +69,22 @@ bool PointsToCostmap::isValidInd(const grid_map::Index & grid_ind)
   return is_valid;
 }
 
+
+/*
+grid坐标系和map坐标系呈以下关系:
+gridy
+|  mapx-------
+|            |
+|            |
+|            | 
+|            mapy
+|__________________gridx
+*/
 grid_map::Index PointsToCostmap::fetchGridIndexFromPoint(const pcl::PointXYZ & point)
 {
+  // std::cout<<"grid_length_x_:"<<grid_length_x_<<",grid_position_x_"<<grid_position_x_
+  //          <<",grid_length_y_:"<<grid_length_y_<<",grid_position_y_"<<grid_position_y_
+  //          <<std::endl;
   // calculate out_grid_map position
   const double origin_x_offset = grid_length_x_ / 2.0 - grid_position_x_;
   const double origin_y_offset = grid_length_y_ / 2.0 - grid_position_y_;
@@ -96,8 +110,10 @@ std::vector<std::vector<std::vector<double>>> PointsToCostmap::assignPoints2Grid
 
   for (const auto & point : in_sensor_points) {
     grid_map::Index grid_ind = fetchGridIndexFromPoint(point);
+    // std::cout<<"grid_ind_x:"<<grid_ind.x()<<",grid_ind_y:"<<grid_ind.y()<<std::endl;
     if (isValidInd(grid_ind)) {
       vec_x_y_z[grid_ind.x()][grid_ind.y()].push_back(point.z);
+      // std::cout<<"valid"<<grid_ind<<std::endl;
     }
   }
   return vec_x_y_z;
@@ -113,14 +129,20 @@ grid_map::Matrix PointsToCostmap::calculateCostmap(
   for (size_t x_ind = 0; x_ind < grid_vec.size(); x_ind++) {
     for (size_t y_ind = 0; y_ind < grid_vec[0].size(); y_ind++) {
       if (grid_vec[x_ind][y_ind].size() == 0) {
+        //某个grid cell内没有点,则设置为grid_min_value
         gridmap_data(x_ind, y_ind) = grid_min_value;
         continue;
       }
+
+      //遍历一个grid cell内的所有点
       for (const auto & z : grid_vec[x_ind][y_ind]) {
         if (z > maximum_height_thres || z < minimum_lidar_height_thres) {
           continue;
         }
+
+        //gridmap_data设置为grid_max_value
         gridmap_data(x_ind, y_ind) = grid_max_value;
+        // std::cout<<"x_ind:"<<x_ind<<",y_ind:"<<y_ind<<",v:"<<gridmap_data(x_ind, y_ind)<<std::endl;
         break;
       }
     }
@@ -138,5 +160,6 @@ grid_map::Matrix PointsToCostmap::makeCostmapFromPoints(
   grid_map::Matrix costmap = calculateCostmap(
     maximum_height_thres, minimum_lidar_height_thres, grid_min_value, grid_max_value, gridmap,
     gridmap_layer_name, grid_vec);
+
   return costmap;
 }

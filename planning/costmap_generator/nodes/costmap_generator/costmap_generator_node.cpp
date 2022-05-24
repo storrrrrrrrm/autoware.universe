@@ -315,7 +315,7 @@ void CostmapGenerator::onTimer()
   }
 
   // Set grid center
-  // 把grid的中心设置为车身在costmap_frame_(map)坐标系下所在位置.
+  // 把车身在costmap_frame_(map)坐标系下所在位置设置为grid的中心.
   grid_map::Position p;
   p.x() = tf.transform.translation.x;
   p.y() = tf.transform.translation.y;
