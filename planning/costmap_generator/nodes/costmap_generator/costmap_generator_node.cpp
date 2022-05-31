@@ -135,6 +135,7 @@ bool isInParkingLot(
 }
 
 // Convert from Point32 to Point
+//一个geometry_msgs::msg::Polygon就是一堆geometry_msgs::msg::Point(x,y,z)
 std::vector<geometry_msgs::msg::Point> poly2vector(const geometry_msgs::msg::Polygon & poly)
 {
   std::vector<geometry_msgs::msg::Point> ps;
@@ -228,6 +229,9 @@ CostmapGenerator::CostmapGenerator(const rclcpp::NodeOptions & node_options)
   initGridmap();
 }
 
+/*
+一个lanelet是一堆点.
+*/
 void CostmapGenerator::loadRoadAreasFromLaneletMap(
   const lanelet::LaneletMapPtr lanelet_map,
   std::vector<std::vector<geometry_msgs::msg::Point>> * area_points)
@@ -237,8 +241,10 @@ void CostmapGenerator::loadRoadAreasFromLaneletMap(
   lanelet::ConstLanelets road_lanelets = lanelet::utils::query::roadLanelets(all_lanelets);
 
   // convert lanelets to polygons and put into area_points array
+
   for (const auto & ll : road_lanelets) {
     geometry_msgs::msg::Polygon poly;
+    //把构成ll的一堆点放到一个Polygon里
     lanelet::visualization::lanelet2Polygon(ll, &poly);
     area_points->push_back(poly2vector(poly));
   }
@@ -269,6 +275,7 @@ void CostmapGenerator::loadParkingAreasFromLaneletMap(
   }
 }
 
+//加载地图信息
 void CostmapGenerator::onLaneletMapBin(
   const autoware_auto_mapping_msgs::msg::HADMapBin::ConstSharedPtr msg)
 {
@@ -276,7 +283,9 @@ void CostmapGenerator::onLaneletMapBin(
   lanelet::utils::conversion::fromBinMsg(*msg, lanelet_map_);
 
   if (use_wayarea_) {
+    //加载道路区域点到area_points_
     loadRoadAreasFromLaneletMap(lanelet_map_, &area_points_);
+    //加载停车区域点到area_points_
     loadParkingAreasFromLaneletMap(lanelet_map_, &area_points_);
   }
 }
@@ -427,6 +436,7 @@ grid_map::Matrix CostmapGenerator::generateObjectsCostmap(
 
   return objects_costmap;
 }
+
 
 grid_map::Matrix CostmapGenerator::generateWayAreaCostmap()
 {
