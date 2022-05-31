@@ -58,23 +58,37 @@ ObjectsToCostmap::ObjectsToCostmap()
 {
 }
 
+/*
+整个过程其实就分成3个步骤:
+1. 在坐标系原点生成一个宽高适度延长的box
+2. 旋转使得这个box和目标的yaw角度一致
+3. 将这个box的中心移动到目标的中心位置
+*/
 Eigen::MatrixXd ObjectsToCostmap::makeRectanglePoints(
   const autoware_auto_perception_msgs::msg::PredictedObject & in_object,
   const double expand_rectangle_size)
 {
+  //对目标的长宽做适度的延长
   double length = in_object.shape.dimensions.x + expand_rectangle_size;
   double width = in_object.shape.dimensions.y + expand_rectangle_size;
+
+  //默认NUMBER_OF_DIMENSIONS:2 NUMBER_OF_POINTS:4
   Eigen::MatrixXd origin_points(NUMBER_OF_DIMENSIONS, NUMBER_OF_POINTS);
+  //矩形共4个角点 每个点有x,y两个值 一共8个值
   origin_points << length / 2, length / 2, -length / 2, -length / 2, width / 2, -width / 2,
     -width / 2, width / 2;
 
+  //根据目标位姿,计算出yaw角
   double yaw = tf2::getYaw(in_object.kinematics.initial_pose_with_covariance.pose.orientation);
+  //旋转矩阵 2x2矩阵
   Eigen::MatrixXd rotation_matrix(NUMBER_OF_DIMENSIONS, NUMBER_OF_DIMENSIONS);
   rotation_matrix << std::cos(yaw), -std::sin(yaw), std::sin(yaw), std::cos(yaw);
+  //计算出旋转后的4个角点位置.  
   Eigen::MatrixXd rotated_points = rotation_matrix * origin_points;
 
   double dx = in_object.kinematics.initial_pose_with_covariance.pose.position.x;
   double dy = in_object.kinematics.initial_pose_with_covariance.pose.position.y;
+  //平移到目标中心位置.
   Eigen::MatrixXd transformed_points(NUMBER_OF_DIMENSIONS, NUMBER_OF_POINTS);
   Eigen::MatrixXd ones = Eigen::MatrixXd::Ones(1, NUMBER_OF_POINTS);
   transformed_points.row(0) = rotated_points.row(0) + dx * ones;
