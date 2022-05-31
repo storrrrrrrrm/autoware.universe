@@ -105,8 +105,10 @@ grid_map::Polygon ObjectsToCostmap::makePolygonFromObjectBox(
   grid_map::Polygon polygon;
   polygon.setFrameId(header.frame_id);
 
+  //rectangle_points是一个2x4矩阵
   Eigen::MatrixXd rectangle_points = makeRectanglePoints(in_object, expand_rectangle_size);
   for (int col = 0; col < rectangle_points.cols(); col++) {
+    //将四个顶点加入polygon
     polygon.addVertex(grid_map::Position(rectangle_points(0, col), rectangle_points(1, col)));
   }
 
@@ -156,13 +158,21 @@ grid_map::Polygon ObjectsToCostmap::makePolygonFromObjectConvexHull(
   return polygon;
 }
 
+/*
+gridmap_layer_name:objects_costmap
+
+*/
 void ObjectsToCostmap::setCostInPolygon(
   const grid_map::Polygon & polygon, const std::string & gridmap_layer_name, const float score,
   grid_map::GridMap & objects_costmap)
 {
+  //vendor/grid_map/grid_map_core/src/iterators/PolygonIterator.cpp中实现了PolygonIterator类
+  //https://github.com/ANYbotics/grid_map#iterators里有动画显示各种iterator的迭代方式.
+  //遍历polygon所占据的每一个grid_cell
   for (grid_map::PolygonIterator itr(objects_costmap, polygon); !itr.isPastEnd(); ++itr) {
     const float current_score = objects_costmap.at(gridmap_layer_name, *itr);
     if (score > current_score) {
+      //将当前cell的值设置为最高类别概率score
       objects_costmap.at(gridmap_layer_name, *itr) = score;
     }
   }
@@ -187,17 +197,24 @@ grid_map::Matrix ObjectsToCostmap::makeCostmapFromObjects(
       // TODO(Kenji Miyake): Add makePolygonFromObjectCylinder
       polygon = makePolygonFromObjectBox(in_objects->header, object, expand_polygon_size);
     }
+
+    //object.classification是一个序列.即一个object可能属于多个类别.取概率最高的一个.
     const auto highest_probability_label = *std::max_element(
       object.classification.begin(), object.classification.end(),
       [](const auto & c1, const auto & c2) { return c1.probability < c2.probability; });
     const double highest_probability = static_cast<double>(highest_probability_label.probability);
+    
+    //
     setCostInPolygon(polygon, OBJECTS_COSTMAP_LAYER_, highest_probability, objects_costmap);
+    
+    //
     setCostInPolygon(polygon, BLURRED_OBJECTS_COSTMAP_LAYER_, highest_probability, objects_costmap);
   }
 
   // Applying mean filter to expanded gridmap
   const grid_map::SlidingWindowIterator::EdgeHandling edge_handling =
     grid_map::SlidingWindowIterator::EdgeHandling::CROP;
+  //类似cv中的滑动窗口.对每一个grid_cell的值改为其周边N个值的均值.窗口大小为size_of_expansion_kernel
   for (grid_map::SlidingWindowIterator iterator(
          objects_costmap, BLURRED_OBJECTS_COSTMAP_LAYER_, edge_handling, size_of_expansion_kernel);
        !iterator.isPastEnd(); ++iterator) {
@@ -205,6 +222,9 @@ grid_map::Matrix ObjectsToCostmap::makeCostmapFromObjects(
       iterator.getData().meanOfFinites();  // Blurring.
   }
 
+  //cwiseMax用法:https://stackoverflow.com/questions/38485794/element-wise-max-and-positive-part-in-eigen
+  //将objects_costmap[OBJECTS_COSTMAP_LAYER_]中的cost更新为没blur和blur后中二者的较大值.
+  //其实就是polygon占据的gridcell内的值为最大概率.polygon周边的grid_cell内的值为滑动窗口内cost的均值.
   objects_costmap[OBJECTS_COSTMAP_LAYER_] = objects_costmap[OBJECTS_COSTMAP_LAYER_].cwiseMax(
     objects_costmap[BLURRED_OBJECTS_COSTMAP_LAYER_]);
 
