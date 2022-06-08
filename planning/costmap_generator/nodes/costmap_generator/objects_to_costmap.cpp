@@ -115,6 +115,11 @@ grid_map::Polygon ObjectsToCostmap::makePolygonFromObjectBox(
   return polygon;
 }
 
+/*
+把polygon向外扩展一点
+in_centroid:map坐标系下的目标中心坐标
+in_corner_point:目标中心的坐标系下的角点坐标
+*/
 geometry_msgs::msg::Point ObjectsToCostmap::makeExpandedPoint(
   const geometry_msgs::msg::Point & in_centroid,
   const geometry_msgs::msg::Point32 & in_corner_point, const double expand_polygon_size)
@@ -131,7 +136,7 @@ geometry_msgs::msg::Point ObjectsToCostmap::makeExpandedPoint(
   double theta = std::atan2(in_corner_point.y - in_centroid.y, in_corner_point.x - in_centroid.x);
   double delta_x = expand_polygon_size * std::cos(theta);
   double delta_y = expand_polygon_size * std::sin(theta);
-  //为何这里还需要加上in_centroid.x?
+  //为何这里还需要加上in_centroid.x? in_corner_point是相对于in_centroid的坐标,而不是map坐标系下的坐标.
   expanded_point.x = in_centroid.x + in_corner_point.x + delta_x;
   expanded_point.y = in_centroid.y + in_corner_point.y + delta_y;
 
