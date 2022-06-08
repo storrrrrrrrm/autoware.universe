@@ -121,6 +121,7 @@ geometry_msgs::msg::Point ObjectsToCostmap::makeExpandedPoint(
 {
   geometry_msgs::msg::Point expanded_point;
 
+  //如果不做扩展的话,expanded_point和in_corner_point是一致的
   if (expand_polygon_size == 0) {
     expanded_point.x = in_corner_point.x;
     expanded_point.y = in_corner_point.y;
@@ -130,6 +131,7 @@ geometry_msgs::msg::Point ObjectsToCostmap::makeExpandedPoint(
   double theta = std::atan2(in_corner_point.y - in_centroid.y, in_corner_point.x - in_centroid.x);
   double delta_x = expand_polygon_size * std::cos(theta);
   double delta_y = expand_polygon_size * std::sin(theta);
+  //为何这里还需要加上in_centroid.x?
   expanded_point.x = in_centroid.x + in_corner_point.x + delta_x;
   expanded_point.y = in_centroid.y + in_corner_point.y + delta_y;
 
@@ -143,7 +145,7 @@ grid_map::Polygon ObjectsToCostmap::makePolygonFromObjectConvexHull(
 {
   grid_map::Polygon polygon;
   polygon.setFrameId(header.frame_id);
-
+  //为何用第一个点的z作为initial_z.  每个点的z是一样的?
   double initial_z = in_object.shape.footprint.points[0].z;
   for (size_t index = 0; index < in_object.shape.footprint.points.size(); index++) {
     if (in_object.shape.footprint.points[index].z == initial_z) {
