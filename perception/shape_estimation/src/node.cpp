@@ -50,6 +50,7 @@ ShapeEstimationNode::ShapeEstimationNode(const rclcpp::NodeOptions & node_option
 void ShapeEstimationNode::callback(const DetectedObjectsWithFeature::ConstSharedPtr input_msg)
 {
   // Guard
+  //如果没有订阅者,则不处理
   if (pub_->get_subscription_count() < 1) {
     return;
   }
@@ -63,10 +64,12 @@ void ShapeEstimationNode::callback(const DetectedObjectsWithFeature::ConstShared
     const auto & object = feature_object.object;
     const auto & label = object.classification.front().label;
     const auto & feature = feature_object.feature;
+    //通过类别判断是否是车辆
     const bool is_vehicle = Label::CAR == label || Label::TRUCK == label || Label::BUS == label ||
                             Label::TRAILER == label;
 
     // convert ros to pcl
+    // 取出feature中的点云
     pcl::PointCloud<pcl::PointXYZ>::Ptr cluster(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromROSMsg(feature.cluster, *cluster);
 
@@ -80,6 +83,7 @@ void ShapeEstimationNode::callback(const DetectedObjectsWithFeature::ConstShared
     geometry_msgs::msg::Pose pose;
     boost::optional<ReferenceYawInfo> ref_yaw_info = boost::none;
     if (use_vehicle_reference_yaw_ && is_vehicle) {
+      //参数1:yaw角度 参数2:search_angle_range
       ref_yaw_info = ReferenceYawInfo{
         static_cast<float>(tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation)),
         tier4_autoware_utils::deg2rad(10)};
