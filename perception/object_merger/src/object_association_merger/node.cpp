@@ -61,8 +61,13 @@ void ObjectAssociationMergerNode::objectsCallback(
   /* global nearest neighbor */
   std::unordered_map<int, int> direct_assignment;
   std::unordered_map<int, int> reverse_assignment;
+  /*
+  计算不同目标之间的相关性,同一大类的目标才可以计算,比如car和truck,person和person
+  本质上score_matrix是目标之间的距离(实际是(max_dist - std::min(dist, max_dist)) / max_dist)
+  */
   Eigen::MatrixXd score_matrix =
     data_association_.calcScoreMatrix(*input_object1_msg, *input_object0_msg);
+  //全局最优匹配
   data_association_.assign(score_matrix, direct_assignment, reverse_assignment);
   for (size_t object0_idx = 0; object0_idx < input_object0_msg->objects.size(); ++object0_idx) {
     if (direct_assignment.find(object0_idx) != direct_assignment.end()) {  // found

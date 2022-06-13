@@ -20,6 +20,17 @@ rclcpp_components_register_node(object_association_merger
   EXECUTABLE object_association_merger_node
 )
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_ros REQUIRED)
+  ament_add_ros_isolated_gtest(test_object_merger
+    test/test_object_merger.cpp
+  )
+
+  target_link_libraries(test_object_merger
+  object_association_merger
+  )
+endif()
+
 ament_auto_package(INSTALL_TO_SHARE
   launch
 )
