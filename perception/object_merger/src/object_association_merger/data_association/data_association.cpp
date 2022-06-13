@@ -25,6 +25,7 @@
 
 DataAssociation::DataAssociation() : score_threshold_(0.1)
 {
+  //初始化一个20x20矩阵,表明不同类别直接是否可以关联/assign
   can_assign_matrix_ = Eigen::MatrixXi::Identity(20, 20);
   can_assign_matrix_(
     autoware_auto_perception_msgs::msg::ObjectClassification::UNKNOWN,
@@ -71,6 +72,9 @@ DataAssociation::DataAssociation() : score_threshold_(0.1)
   can_assign_matrix_(
     autoware_auto_perception_msgs::msg::ObjectClassification::PEDESTRIAN,
     autoware_auto_perception_msgs::msg::ObjectClassification::UNKNOWN) = 0;
+  /*初始化一个max_dist_matrix,表明不一个目标可能的最大运动距离.之所以需要涉及到类别,主要是
+    考虑到一个目标在两次检测中可能被检测成不同的类别,比如car/truck
+  */
   max_dist_matrix_ = Eigen::MatrixXd::Constant(20, 20, 1.0);
   max_dist_matrix_(
     autoware_auto_perception_msgs::msg::ObjectClassification::CAR,
@@ -132,6 +136,7 @@ DataAssociation::DataAssociation() : score_threshold_(0.1)
   max_dist_matrix_(
     autoware_auto_perception_msgs::msg::ObjectClassification::PEDESTRIAN,
     autoware_auto_perception_msgs::msg::ObjectClassification::PEDESTRIAN) = 2.0;
+  //最大交叉区域?
   max_area_matrix_ = Eigen::MatrixXd::Constant(20, 20, /* large number */ 10000.0);
   max_area_matrix_(
     autoware_auto_perception_msgs::msg::ObjectClassification::UNKNOWN,
@@ -196,6 +201,7 @@ DataAssociation::DataAssociation() : score_threshold_(0.1)
   max_area_matrix_(
     autoware_auto_perception_msgs::msg::ObjectClassification::PEDESTRIAN,
     autoware_auto_perception_msgs::msg::ObjectClassification::PEDESTRIAN) = 2.0;
+  //最小交叉区域?
   min_area_matrix_ = Eigen::MatrixXd::Constant(20, 20, /* small number */ 0.0);
   min_area_matrix_(
     autoware_auto_perception_msgs::msg::ObjectClassification::CAR,
@@ -355,14 +361,25 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
         const double dist = getDistance(
           object0.objects.at(object0_idx).kinematics.pose_with_covariance.pose.position,
           object1.objects.at(object1_idx).kinematics.pose_with_covariance.pose.position);
+        
+        //获取目标的面积,根据不同的type(BOUNDING_BOX/CYLINDER/POLYGON)有不同的计算方式
         const double area0 = utils::getArea(object0.objects.at(object0_idx).shape);
         const double area1 = utils::getArea(object1.objects.at(object1_idx).shape);
         // the score (=cost) is reversed in ssp solver
         score = (max_dist - std::min(dist, max_dist)) / max_dist;
+        std::cout<<"dist:"<<dist<<",max_dist:"<<max_dist
+                 <<",score:"<<score<<std::endl;
+        std::cout<<"area0:"<<area0<<",min_area:"<<min_area
+                 <<",max_area:"<<max_area<<std::endl;
+        std::cout<<"area1:"<<area1<<",min_area:"<<min_area
+                 <<",max_area:"<<max_area<<std::endl;
+                
         if (max_dist < dist) {
           score = 0.0;
         }
         if (area0 < min_area || max_area < area0) {
+          std::cout<<"area0:"<<area0<<",min_area:"<<min_area
+                 <<",max_area:"<<max_area<<std::endl;
           score = 0.0;
         }
         if (area1 < min_area || max_area < area1) {
