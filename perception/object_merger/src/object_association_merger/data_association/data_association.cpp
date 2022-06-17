@@ -280,6 +280,20 @@ bool DataAssociation::assign(
   // Solve
   assignment_problem::MaximizeLinearAssignment(score, &direct_assignment, &reverse_assignment);
 
+  // std::cout<<"direct_assignment:"<<std::endl;
+  // for(auto v : direct_assignment)
+  // {
+  //     std::cout<<v.first<<std::endl;
+  //     std::cout<<v.second<<std::endl;
+  // }
+
+  // std::cout<<"reverse_assignment:"<<std::endl;
+  // for(auto v : reverse_assignment)
+  // {
+  //     std::cout<<v.first<<std::endl;
+  //     std::cout<<v.second<<std::endl;
+  // }
+
   for (auto itr = direct_assignment.begin(); itr != direct_assignment.end();) {
     if (src(itr->first, itr->second) < score_threshold_) {
       itr = direct_assignment.erase(itr);
