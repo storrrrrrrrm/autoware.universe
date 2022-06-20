@@ -316,7 +316,7 @@ void FreespacePlannerNode::onRoute(const HADMapRoute::ConstSharedPtr msg)
   route_ = msg;
 
   goal_pose_.header = msg->header;
-  goal_pose_.pose = msg->goal_pose;
+  goal_pose_.pose = msg->goal_pose;//位置及姿态
 
   reset();
 }
@@ -372,6 +372,7 @@ bool FreespacePlannerNode::isPlanRequired()
   }
 
   if (node_param_.replan_when_course_out) {
+    //计算当前位置距离trajectory上的点的最近距离是否大于某个阈值
     const bool is_course_out =
       calcDistance2d(trajectory_, current_pose_.pose) > node_param_.th_course_out_distance_m;
     if (is_course_out) {
@@ -444,7 +445,7 @@ void FreespacePlannerNode::onTimer()
     debug_pose_array_pub_->publish(trajectory2PoseArray(stop_trajectory));
     debug_partial_pose_array_pub_->publish(trajectory2PoseArray(stop_trajectory));
 
-    // Plan new trajectory
+    // Plan new trajectory 重新规划轨迹
     planTrajectory();
   }
 
@@ -467,6 +468,7 @@ void FreespacePlannerNode::onTimer()
 void FreespacePlannerNode::planTrajectory()
 {
   // Extend robot shape
+  // 先把车的形状做个扩展
   freespace_planning_algorithms::VehicleShape extended_vehicle_shape =
     planner_common_param_.vehicle_shape;
   constexpr double margin = 1.0;

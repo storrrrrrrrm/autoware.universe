@@ -79,19 +79,19 @@ AstarSearch::TransitionTable createTransitionTable(
   AstarSearch::TransitionTable transition_table;
   transition_table.resize(theta_size);
 
-  const double dtheta = 2.0 * M_PI / theta_size;
+  const double dtheta = 2.0 * M_PI / theta_size; //将360度划分为theta_size份.每一份的转角度数.
 
   // Minimum moving distance with one state update
   // arc  = r * theta
-  const auto & R_min = minimum_turning_radius;
-  const auto & R_max = maximum_turning_radius;
-  const double step_min = R_min * dtheta;
-  const double dR = (R_max - R_min) / turning_radius_size;
+  const auto & R_min = minimum_turning_radius; //最小转弯半径
+  const auto & R_max = maximum_turning_radius; //最大转弯半径
+  const double step_min = R_min * dtheta; //
+  const double dR = (R_max - R_min) / turning_radius_size; //
 
   // NodeUpdate actions
   std::vector<NodeUpdate> forward_node_candidates;
   const NodeUpdate forward_straight{step_min, 0.0, 0.0, step_min, false, false};
-  forward_node_candidates.push_back(forward_straight);
+  forward_node_candidates.push_back(forwartheta_sizestraight);
   for (int i = 0; i < turning_radius_size + 1; ++i) {
     double R = R_min + i * dR;
     double step = R * dtheta;
@@ -168,6 +168,7 @@ bool AstarSearch::makePlan(
 
 bool AstarSearch::setStartNode()
 {
+  //获取当前pose对应的index
   const auto index = pose2index(costmap_, start_pose_, planner_common_param_.theta_size);
 
   if (detectCollision(index)) {
@@ -237,6 +238,7 @@ bool AstarSearch::search()
     openlist_.pop();
     current_node->status = NodeStatus::Closed;
 
+    //找到目标位置了,则退出
     if (isGoal(*current_node)) {
       goal_node_ = current_node;
       setPath(*current_node);
