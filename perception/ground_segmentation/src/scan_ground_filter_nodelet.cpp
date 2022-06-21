@@ -142,18 +142,20 @@ void ScanGroundFilterComponent::classifyPointCloud(
       auto * p = &in_radial_ordered_clouds[i][j];
       auto * p_prev = &in_radial_ordered_clouds[i][j - 1];
 
+      //射线上的第一个点
       if (j == 0) {
         bool is_front_side = (p->orig_point->x > virtual_ground_point.x);
         if (use_virtual_ground_point_ && is_front_side) {
           prev_gnd_point = virtual_ground_point;
         } else {
-          prev_gnd_point = init_ground_point;
+          prev_gnd_point = init_ground_point;//初始化为(0,0,0)
         }
-        prev_gnd_radius = std::hypot(prev_gnd_point.x, prev_gnd_point.y);
+
+        prev_gnd_radius = std::hypot(prev_gnd_point.x, prev_gnd_point.y);//平方根
         prev_gnd_slope = 0.0f;
         ground_cluster.initialize();
         non_ground_cluster.initialize();
-        points_distance = calcDistance3d(*p->orig_point, prev_gnd_point);
+        points_distance = calcDistance3d(*p->orig_point, prev_gnd_point);//到雷达的距离
       } else {
         points_distance = calcDistance3d(*p->orig_point, *p_prev->orig_point);
       }

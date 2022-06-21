@@ -196,12 +196,13 @@ void RayGroundFilterComponent::ClassifyPointCloud(
     float prev_height = 0.f;
     bool prev_ground = false;
     bool current_ground = false;
+    //遍历一条射线上的每一个点
     for (size_t j = 0; j < in_radial_ordered_clouds[i].size();
          j++)  // loop through each point in the radial div
     {
-      double local_max_slope = local_max_slope_;
+      double local_max_slope = local_max_slope_;//初始化为6度
       if (j == 0) {
-        local_max_slope = initial_max_slope_;
+        local_max_slope = initial_max_slope_; //如果是第一个点,初始化为3度
         if (use_vehicle_footprint_) {
           // calc intersection of vehicle footprint and initial point vector
           const auto radius = calcPointVehicleIntersection(
@@ -218,9 +219,13 @@ void RayGroundFilterComponent::ClassifyPointCloud(
         }
       }
 
+      //平面上两点之间的距离
       float points_distance = in_radial_ordered_clouds[i][j].radius - prev_radius;
+      //两个点之间的最大可能高度差(这个应该和雷达的线束间隔角度有关). 前提:认为两个相邻点连线与水平面上的射线的角度不应该超过local_max_slope
       float height_threshold = tan(DEG2RAD(local_max_slope)) * points_distance;
+      //当前点的实际z值
       float current_height = in_radial_ordered_clouds[i][j].point.z;
+      //理论上在坡度为general_max_slope_的地面上,radius处的点的最大z值
       float general_height_threshold =
         tan(DEG2RAD(general_max_slope_)) * in_radial_ordered_clouds[i][j].radius;
 
@@ -235,6 +240,7 @@ void RayGroundFilterComponent::ClassifyPointCloud(
       } else {
         // check current point height against the LOCAL threshold (previous point)
         if (
+          //认为相邻两点的最大高度差为height_threshold 所以判断是不是有效的相邻点
           current_height <= (prev_height + height_threshold) &&
           current_height >= (prev_height - height_threshold)) {
           // Check again using general geometry (radius from origin)
@@ -245,10 +251,10 @@ void RayGroundFilterComponent::ClassifyPointCloud(
               current_height >= -general_height_threshold) {
               current_ground = true;
             } else {
-              current_ground = false;
+              current_ground = false;//已经超出该radius处的理论最高地面点了,则该点不为地面点.
             }
           } else {
-            current_ground = true;
+            current_ground = true; //前面一个点是地面点,该点还与它的高度差在理论最大之内.那这个点也是地面点.
           }
         } else {
           // check if previous point is too far from previous one, if so classify again
