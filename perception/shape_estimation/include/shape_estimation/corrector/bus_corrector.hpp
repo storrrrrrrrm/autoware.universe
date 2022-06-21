@@ -25,6 +25,7 @@ private:
   bool use_reference_yaw_;
 
 public:
+  //bus尺寸的相关参数
   explicit BusCorrector(bool use_reference_yaw = false) : use_reference_yaw_(use_reference_yaw)
   {
     params_.min_width = 2.0;
@@ -37,6 +38,7 @@ public:
 
   ~BusCorrector() = default;
 
+  //校验shape和pose是否正确
   bool correct(
     autoware_auto_perception_msgs::msg::Shape & shape, geometry_msgs::msg::Pose & pose) override;
 };
