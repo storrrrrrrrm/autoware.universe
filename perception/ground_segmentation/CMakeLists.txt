@@ -59,3 +59,15 @@ rclcpp_components_register_node(ground_segmentation
 ament_auto_package(INSTALL_TO_SHARE
   launch
 )
+
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_ros REQUIRED)
+  ament_add_ros_isolated_gtest(test_ray_ground_filter
+    test/test_ray_ground_filter.cpp
+  )
+
+  target_link_libraries(test_ray_ground_filter
+    ground_segmentation
+  )
+endif()
