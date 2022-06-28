@@ -313,6 +313,8 @@ void FreespacePlannerNode::getAstarParam()
 //设置目标终点
 void FreespacePlannerNode::onRoute(const HADMapRoute::ConstSharedPtr msg)
 {
+  if (scenario_ = nullptr) return;
+
   route_ = msg;
 
   goal_pose_.header = msg->header;
