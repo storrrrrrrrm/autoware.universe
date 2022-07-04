@@ -58,6 +58,7 @@ rclcpp_components_register_node(ground_segmentation
 
 ament_auto_package(INSTALL_TO_SHARE
   launch
+  test/data
 )
 
 
@@ -70,4 +71,5 @@ if(BUILD_TESTING)
   target_link_libraries(test_ray_ground_filter
     ground_segmentation
   )
+
 endif()

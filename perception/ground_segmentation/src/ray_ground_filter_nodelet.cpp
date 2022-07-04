@@ -49,6 +49,7 @@ RayGroundFilterComponent::RayGroundFilterComponent(const rclcpp::NodeOptions & o
     grid_height_ = 1000;
     grid_precision_ = 0.2;
     ray_ground_filter::generateColors(colors_, color_num_);
+    std::cout<<"colors_ size:"<<colors_.size()<<std::endl;
 
     min_x_ = declare_parameter("min_x", -0.01);
     max_x_ = declare_parameter("max_x", 0.01);
@@ -79,6 +80,9 @@ bool RayGroundFilterComponent::TransformPointCloud(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & in_cloud_ptr,
   const sensor_msgs::msg::PointCloud2::SharedPtr & out_cloud_ptr)
 {
+  std::cout<<"in_target_frame:"<<in_target_frame<<std::endl;
+  std::cout<<"in_cloud_ptr->header.frame_id:"<<in_cloud_ptr->header.frame_id<<std::endl;
+
   if (in_target_frame == in_cloud_ptr->header.frame_id) {
     *out_cloud_ptr = *in_cloud_ptr;
     return true;
@@ -112,9 +116,11 @@ void RayGroundFilterComponent::ConvertXYZIToRTZColor(
 
   for (size_t i = 0; i < in_cloud->points.size(); i++) {
     PointXYZRTColor new_point;
+    //计算当前点在地面投影点所处的圆的半径
     auto radius = static_cast<float>(sqrt(
       in_cloud->points[i].x * in_cloud->points[i].x +
       in_cloud->points[i].y * in_cloud->points[i].y));
+    //计算和x轴方向的夹角
     auto theta =
       static_cast<float>(atan2(in_cloud->points[i].y, in_cloud->points[i].x)) * 180 / M_PI;
     if (theta < 0) {
@@ -372,6 +378,7 @@ void RayGroundFilterComponent::filter(
 rcl_interfaces::msg::SetParametersResult RayGroundFilterComponent::paramCallback(
   const std::vector<rclcpp::Parameter> & p)
 {
+  std::cout<<"paramCallback"<<std::endl;
   std::scoped_lock lock(mutex_);
 
   if (get_param(p, "min_x", min_x_)) {
