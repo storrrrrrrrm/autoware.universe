@@ -35,6 +35,8 @@ using vehicle_info_util::VehicleInfoUtil;
 ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions & options)
 : Filter("ScanGroundFilter", options)
 {
+  // RCLCPP_INFO_STREAM(LOGGER, "use_intraprocess_comms: " << get_node_options().use_intra_process_comms() << " allow undeclared params: " << get_node_options().allow_undeclared_parameters() << " auto declare params: " << get_node_options().automatically_declare_parameters_from_overrides());
+  
   // set initial parameters
   {
     base_frame_ = declare_parameter("base_frame", "base_link");
@@ -57,6 +59,9 @@ bool ScanGroundFilterComponent::transformPointCloud(
   const std::string & in_target_frame, const PointCloud2ConstPtr & in_cloud_ptr,
   const PointCloud2::SharedPtr & out_cloud_ptr)
 {
+    std::cout<<"in_target_frame:"<<in_target_frame<<std::endl;
+  std::cout<<"in_cloud_ptr->header.frame_id:"<<in_cloud_ptr->header.frame_id<<std::endl;
+
   if (in_target_frame == in_cloud_ptr->header.frame_id) {
     *out_cloud_ptr = *in_cloud_ptr;
     return true;

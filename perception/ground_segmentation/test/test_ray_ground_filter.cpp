@@ -111,6 +111,7 @@ TEST_F(RayGroundFilterComponentTestSuite, TestCase1)
     //set filter parameter
     ray_ground_filter_test->set_parameter(rclcpp::Parameter("base_frame", "velodyne_top"));
     ray_ground_filter_test->set_parameter(rclcpp::Parameter("general_max_slope", 6));
+    ray_ground_filter_test->set_parameter(rclcpp::Parameter("local_max_slope", 16));
 
     sensor_msgs::msg::PointCloud2 out_cloud;
     ray_ground_filter_test->filter(input_msg_ptr,nullptr,out_cloud);
@@ -119,6 +120,7 @@ TEST_F(RayGroundFilterComponentTestSuite, TestCase1)
     //check out_cloud
     int effect_num = 0;
     int total_num = 0;
+    // const float ground_point_z = -1.8;
     for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(out_cloud, "x"),
          iter_y(out_cloud, "y"), iter_z(out_cloud, "z");
          iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z)
@@ -132,5 +134,8 @@ TEST_F(RayGroundFilterComponentTestSuite, TestCase1)
         }
     }
 
-    std::cout<<"effect_num="<<effect_num<<",total_num="<<total_num<<std::endl;
+    const float percent = 1.0 * effect_num/total_num;
+    std::cout<<"effect_num="<<effect_num<<",total_num="<<total_num
+          <<",percentage:"<<percent<<std::endl;
+    EXPECT_GE(percent,0.9);
 }
