@@ -82,19 +82,33 @@ bool BoundingBoxShapeModel::fitLShape(
    */
 
   // Paper : Algo.2 Search-Based Rectangle Fitting
+  /*
+  类似于ransanc. ransanc用点到平面的距离来表达误差. 这个用点到矩形四条边的距离来表达误差.
+  其基本思想是遍历矩形的所有可能方向；每次迭代时，可以很容易地找到一个指向该方向并包含所有扫描点的矩形；
+  因此可以得到所有点到矩形四条边的距离，根据这些距离，我们可以将点分成p和q，
+  并计算出相应的平方误差作为上图式（1）中的目标函数；
+  在迭代所有方向并获得所有相应的平方误差后
+  （假设该点云簇有1000个点，且有5个可能的方向，则相应的有5组点到直线（矩形边）的距离的平方误差）
+  ，我们寻找得到最小平方误差的最佳方向，并根据该方向调整矩形
+  */
   std::vector<std::pair<float /*theta*/, float /*q*/>> Q;
   constexpr float angle_resolution = M_PI / 180.0;
   for (float theta = min_angle; theta <= max_angle + epsilon; theta += angle_resolution) {
     Eigen::Vector2f e_1;
+    //矩形的一条边的法向量
     e_1 << std::cos(theta), std::sin(theta);  // col.3, Algo.2
     Eigen::Vector2f e_2;
+    //矩形的另一条边的法向量
     e_2 << -std::sin(theta), std::cos(theta);  // col.4, Algo.2
     std::vector<float> C_1;                    // col.5, Algo.2
     std::vector<float> C_2;                    // col.6, Algo.2
     for (const auto & point : cluster) {
+      //点到一条矩形边的距离
       C_1.push_back(point.x * e_1.x() + point.y * e_1.y());
+      //点到另一条矩形边的距离
       C_2.push_back(point.x * e_2.x() + point.y * e_2.y());
     }
+    //
     float q = calcClosenessCriterion(C_1, C_2);  // col.7, Algo.2
     Q.push_back(std::make_pair(theta, q));       // col.8, Algo.2
   }
@@ -174,9 +188,15 @@ bool BoundingBoxShapeModel::fitLShape(
   return true;
 }
 
+//点到边缘的贴近程度最大化
 float BoundingBoxShapeModel::calcClosenessCriterion(
   const std::vector<float> & C_1, const std::vector<float> & C_2)
 {
+  /*用1/d来表达到边缘的贴近程度.
+  e1为距离边缘最近的点,e2为距离边缘最远的点.
+  d为点p和边缘点e1/e2(e1,e2的选取决定于p和e1,e2谁的距离更近)的距离.
+  */
+
   // Paper : Algo.4 Closeness Criterion
   const float min_c_1 = *std::min_element(C_1.begin(), C_1.end());  // col.2, Algo.4
   const float max_c_1 = *std::max_element(C_1.begin(), C_1.end());  // col.2, Algo.4
@@ -185,6 +205,7 @@ float BoundingBoxShapeModel::calcClosenessCriterion(
 
   std::vector<float> D_1;  // col.4, Algo.4
   for (const auto & c_1_element : C_1) {
+    //距离最近的点更近还是距离最远的点更近? 以此判断更靠近矩形边还是远离矩形边
     const float v = std::min(max_c_1 - c_1_element, c_1_element - min_c_1);
     D_1.push_back(v * v);
   }
@@ -194,6 +215,8 @@ float BoundingBoxShapeModel::calcClosenessCriterion(
     const float v = std::min(max_c_2 - c_2_element, c_2_element - min_c_2);
     D_2.push_back(v * v);
   }
+  //到了这以后,D_1,D_2里存储着到各个点P到边A最近点或者最远点的距离(取决于P离哪个点更近),到边B最近点或者最远点的距离
+
   constexpr float d_min = 0.1 * 0.1;
   constexpr float d_max = 0.4 * 0.4;
   float beta = 0;  // col.6, Algo.4
@@ -201,6 +224,8 @@ float BoundingBoxShapeModel::calcClosenessCriterion(
     if (d_max < std::min(D_1.at(i), D_2.at(i))) {
       continue;
     }
+
+    //该点离哪个边更近
     const float d = std::max(std::min(D_1.at(i), D_2.at(i)), d_min);
     beta += 1.0 / d;
   }
