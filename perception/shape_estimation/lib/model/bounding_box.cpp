@@ -93,6 +93,7 @@ bool BoundingBoxShapeModel::fitLShape(
   */
   std::vector<std::pair<float /*theta*/, float /*q*/>> Q;
   constexpr float angle_resolution = M_PI / 180.0;
+  //遍历各种可能的位姿的矩形框
   for (float theta = min_angle; theta <= max_angle + epsilon; theta += angle_resolution) {
     Eigen::Vector2f e_1;
     //矩形的一条边的法向量
@@ -108,11 +109,12 @@ bool BoundingBoxShapeModel::fitLShape(
       //点到另一条矩形边的距离
       C_2.push_back(point.x * e_2.x() + point.y * e_2.y());
     }
-    //
+    //q代表着所有的点贴近边缘的程度
     float q = calcClosenessCriterion(C_1, C_2);  // col.7, Algo.2
     Q.push_back(std::make_pair(theta, q));       // col.8, Algo.2
   }
 
+  //找出能够使得所有点最贴合的矩形
   float theta_star{0.0};  // col.10, Algo.2
   float max_q = 0.0;
   for (size_t i = 0; i < Q.size(); ++i) {

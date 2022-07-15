@@ -232,8 +232,11 @@ void RayGroundFilterComponent::ClassifyPointCloud(
       //当前点的实际z值
       float current_height = in_radial_ordered_clouds[i][j].point.z;
       //理论上在坡度为general_max_slope_的地面上,radius处的点的最大z值
+      // std::cout<<"general_max_slope_:"<<general_max_slope_<<std::endl;
       float general_height_threshold =
         tan(DEG2RAD(general_max_slope_)) * in_radial_ordered_clouds[i][j].radius;
+
+      int condition = -1;
 
       // for points which are very close causing the height threshold to be tiny,
       // set a minimum value
@@ -255,11 +258,15 @@ void RayGroundFilterComponent::ClassifyPointCloud(
             if (
               current_height <= general_height_threshold &&
               current_height >= -general_height_threshold) {
+
+              condition = 0;
               current_ground = true;
             } else {
+              condition = 1;
               current_ground = false;//已经超出该radius处的理论最高地面点了,则该点不为地面点.
             }
           } else {
+            condition = 2;
             current_ground = true; //前面一个点是地面点,该点还与它的高度差在理论最大之内.那这个点也是地面点.
           }
         } else {
@@ -268,8 +275,10 @@ void RayGroundFilterComponent::ClassifyPointCloud(
             points_distance > reclass_distance_threshold_ &&
             (current_height <= general_height_threshold &&
              current_height >= -general_height_threshold)) {
+            condition = 3;
             current_ground = true;
           } else {
+            condition = 4;
             current_ground = false;
           }
         }
@@ -285,6 +294,17 @@ void RayGroundFilterComponent::ClassifyPointCloud(
 
       prev_radius = in_radial_ordered_clouds[i][j].radius;
       prev_height = in_radial_ordered_clouds[i][j].point.z;
+
+//for debug
+      if( (current_height < -1.5) && (current_ground == false) )
+      {
+          auto p = in_radial_ordered_clouds[i][j].point;
+          std::cout<<"p.x="<<p.x<<",p.y="<<p.y<<",p.z="<<p.z<<std::endl;
+          std::cout<<"current_height="<<current_height<<std::endl;
+          std::cout<<"general_height_threshold="<<general_height_threshold<<std::endl;
+          std::cout<<"height_threshold="<<height_threshold<<std::endl;
+          std::cout<<"condition="<<condition<<std::endl;
+      }
     }
   }
 }

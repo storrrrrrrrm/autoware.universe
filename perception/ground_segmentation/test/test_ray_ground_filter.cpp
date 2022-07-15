@@ -12,55 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/*trick to test protected function. tried to write a derived class from  RayGroundFilterComponent, so
-it can access protected function,but gtest does not support non-default construct function while RayGroundFilterComponent
-has no default construct functions. i do not want to break current non-test code,so i use a define private public trick.
-*/
-// #define protected public
 #include <ground_segmentation/ray_ground_filter_nodelet.hpp>
-// #undef protected
+
 #include "ament_index_cpp/get_package_share_directory.hpp"
 #include <sensor_msgs/point_cloud2_iterator.hpp>
-
+#include "geometry_msgs/msg/transform_stamped.hpp"
+#include "tf2_ros/transform_broadcaster.h"
 #include <gtest/gtest.h>
-
-// class RayGroundFilterComponentTest : public ::testing::Test
-// {
-// protected:
-//   void SetUp() override 
-//   { 
-//     rclcpp::init(0, nullptr); 
-
-//     rclcpp::NodeOptions  options;
-//     ray_ground_filter_ = std::make_shared<ground_segmentation::RayGroundFilterComponent>(options);
-//   }
-
-//   RayGroundFilterComponentTest()
-//   {
-
-//   }
-
-//   ~RayGroundFilterComponentTest() override { rclcpp::shutdown(); }
-
-// public:
-//   std::shared_ptr<ground_segmentation::RayGroundFilterComponent> ray_ground_filter_;
-// };
-
-
-
-
-// TEST_F(RayGroundFilterComponentTest, TestCase1)
-// {
-//     //read pcd to pointcloud
-//     pcl::PointCloud<pcl::PointXYZ> cloud;
-//     pcl::io::loadPCDFile<pcl::PointXYZ>("./data/test.pcd", cloud);
-//     sensor_msgs::msg::PointCloud2::SharedPtr input_msg_ptr(new sensor_msgs::msg::PointCloud2);
-//     pcl::toROSMsg(cloud, *input_msg_ptr);
-
-//     sensor_msgs::msg::PointCloud2 out_cloud;
-//     ray_ground_filter_->filter(input_msg_ptr,nullptr,out_cloud);
-// }
-
 
 class RayGroundFilterComponentTestSuite : public ::testing::Test
 {
@@ -73,7 +31,7 @@ class RayGroundFilterComponentTest : public ground_segmentation::RayGroundFilter
 {
 public:
   RayGroundFilterComponentTest(const rclcpp::NodeOptions & options)
-  :RayGroundFilterComponent(options)
+  :RayGroundFilterComponent(options),tf2_broadcaster_(*this)
   {
     input_pointcloud_pub_ =
       this->create_publisher<sensor_msgs::msg::PointCloud2>("/test_ray_ground_filter/input_cloud", 1);
@@ -91,6 +49,30 @@ public:
 
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr input_pointcloud_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr output_pointcloud_pub_;
+  
+  // TF broadcaster
+  tf2_ros::TransformBroadcaster tf2_broadcaster_;
+  void send_tf()
+  {
+    geometry_msgs::msg::TransformStamped t;
+
+    t.header.stamp = this->now();
+    t.header.frame_id = "base_link";
+    t.child_frame_id = "velodyne_top";
+
+    t.transform.translation.x = 0.6;
+    t.transform.translation.y = 0;
+    t.transform.translation.z = 2;
+
+    tf2::Quaternion q;
+    q.setRPY(0.0, 1.0, 0.0);
+    t.transform.rotation.x = q.x();
+    t.transform.rotation.y = q.y();
+    t.transform.rotation.z = q.z();
+    t.transform.rotation.w = q.w();
+
+    tf2_broadcaster_.sendTransform(t);
+  }
 };
 
 TEST_F(RayGroundFilterComponentTestSuite, TestCase1)
@@ -105,13 +87,32 @@ TEST_F(RayGroundFilterComponentTestSuite, TestCase1)
     input_msg_ptr->header.frame_id="velodyne_top";
     
     rclcpp::NodeOptions node_options;
+    std::vector<rclcpp::Parameter> parameters;
+    parameters.emplace_back(rclcpp::Parameter("base_frame", "base_link"));
+    parameters.emplace_back(rclcpp::Parameter("general_max_slope", 2.0));
+    parameters.emplace_back(rclcpp::Parameter("local_max_slope", 3.0));
+    parameters.emplace_back(rclcpp::Parameter("initial_max_slope", 1.0));
+    node_options.parameter_overrides(parameters);
     auto ray_ground_filter_test = std::make_shared<RayGroundFilterComponentTest>(node_options);
     ray_ground_filter_test->input_pointcloud_pub_->publish(*input_msg_ptr);
     
+    //send tf 
+    ray_ground_filter_test->send_tf();
+
     //set filter parameter
-    ray_ground_filter_test->set_parameter(rclcpp::Parameter("base_frame", "velodyne_top"));
-    ray_ground_filter_test->set_parameter(rclcpp::Parameter("general_max_slope", 6));
-    ray_ground_filter_test->set_parameter(rclcpp::Parameter("local_max_slope", 16));
+    // ray_ground_filter_test->set_parameter(rclcpp::Parameter("base_frame", "velodyne_top"));
+    // ray_ground_filter_test->set_parameter(rclcpp::Parameter("general_max_slope", 0));
+    // ray_ground_filter_test->set_parameter(rclcpp::Parameter("local_max_slope", 0));
+    // ray_ground_filter_test->set_parameter(rclcpp::Parameter("initial_max_slope", 0));
+    // ray_ground_filter_test->set_parameter(rclcpp::Parameter("min_height_threshold", 0.));
+    // ray_ground_filter_test->set_parameter(rclcpp::Parameter("min_height_threshold", 0.1));
+
+    //     local_max_slope_ = declare_parameter("local_max_slope", 6.0);
+    // initial_max_slope_ = declare_parameter("initial_max_slope", 3.0);
+    // radial_divider_angle_ = declare_parameter("radial_divider_angle", 1.0);
+    // min_height_threshold_ = declare_parameter("min_height_threshold", 0.15);
+    // concentric_divider_distance_ = declare_parameter("concentric_divider_distance", 0.0);
+    // reclass_distance_threshold_ = declare_parameter("reclass_distance_threshold", 0.1);
 
     sensor_msgs::msg::PointCloud2 out_cloud;
     ray_ground_filter_test->filter(input_msg_ptr,nullptr,out_cloud);
