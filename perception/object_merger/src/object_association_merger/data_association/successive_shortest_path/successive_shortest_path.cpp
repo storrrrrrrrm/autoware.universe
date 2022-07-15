@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <object_association_merger/successive_shortest_path.hpp>
+#include "object_association_merger/data_association/solver/successive_shortest_path.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -22,6 +22,7 @@
 #include <utility>
 #include <vector>
 
+<<<<<<< HEAD
 // #include <cstdio>
 // #include <chrono>
 #include <iostream>
@@ -29,6 +30,9 @@
 // #include <unordered_set>
 
 namespace assignment_problem
+=======
+namespace gnn_solver
+>>>>>>> main
 {
 struct ResidualEdge
 {
@@ -56,7 +60,7 @@ struct ResidualEdge
   }
 };
 
-void MaximizeLinearAssignment(
+void SSP::maximizeLinearAssignment(
   const std::vector<std::vector<double>> & cost, std::unordered_map<int, int> * direct_assignment,
   std::unordered_map<int, int> * reverse_assignment)
 {
@@ -112,8 +116,8 @@ void MaximizeLinearAssignment(
   //     - {1, ...,  n_agents}: agent nodes
   //     - {n_agents+1, ...,  n_agents+n_tasks}: task nodes
   //     - n_agents+n_tasks+1: sink node
-  //     - {n_agents+n_tasks+2, ...,
-  //        n_agents+n_tasks+1+n_agents}: dummy node (when sparse_cost is true)
+  //     - {n_agents+n_tasks+2, ..., n_agents+n_tasks+1+n_agents}:
+  //       dummy node (when sparse_cost is true)
   std::vector<std::vector<ResidualEdge>> adjacency_list(n_nodes);
 
   // Reserve memory
@@ -243,7 +247,7 @@ void MaximizeLinearAssignment(
   std::vector<bool> is_visited(n_nodes, false);
 
   // Parent node (<prev_node, edge_index>)
-  std::vector<std::pair<int, int>> prevs(n_nodes);
+  std::vector<std::pair<int, int>> prev_values(n_nodes);
 
   //循环max_flow次,每次找到一条最短路(也可能不满足条件找不到).找到了最短路即意味着l1中的某个目标和l2中
   //的某个目标产生了关联关系
@@ -254,19 +258,19 @@ void MaximizeLinearAssignment(
     std::priority_queue<
       std::pair<double, int>, std::vector<std::pair<double, int>>,
       std::greater<std::pair<double, int>>>
-      pqueue;
+      p_queue;
 
     // Reset all trajectory states
     if (i > 0) {
-      std::fill(dists.begin(), dists.end(), INF_DIST);
+      std::fill(distances.begin(), distances.end(), INF_DIST);
       std::fill(is_visited.begin(), is_visited.end(), false);
     }
 
     // Start trajectory from the source node
-    pqueue.push(std::make_pair(0, source));
-    dists.at(source) = 0;
+    p_queue.push(std::make_pair(0, source));
+    distances.at(source) = 0;
 
-    while (!pqueue.empty()) {
+    while (!p_queue.empty()) {
       // Get the next element
       //队列里插入的是:pair<source到当前边指向的终点的cost,当前边指向的node>
       std::pair<double, int> cur_elem = pqueue.top();
@@ -282,7 +286,7 @@ void MaximizeLinearAssignment(
       if (is_visited.at(cur_node)) {
         continue;
       }
-      assert(cur_node_dist == dists.at(cur_node));
+      assert(cur_node_dist == distances.at(cur_node));
 
       // Mark as visited
       is_visited.at(cur_node) = true;
@@ -326,7 +330,7 @@ void MaximizeLinearAssignment(
     std::cout<<"**********"<<std::endl;
 
     // Shortest path length to sink is greater than MAX_COST,
-    // which means no non-dummy routes left ,terminate
+    // which means no non-dummy routes left, terminate
     if (potentials.at(sink) >= MAX_COST) {
       break;
     }
@@ -349,7 +353,8 @@ void MaximizeLinearAssignment(
     int v = sink;
     int prev_v;
     while (v != source) {
-      ResidualEdge & e_forward = adjacency_list.at(prevs.at(v).first).at(prevs.at(v).second);
+      ResidualEdge & e_forward =
+        adjacency_list.at(prev_values.at(v).first).at(prev_values.at(v).second);
       assert(e_forward.dst == v);
       ResidualEdge & e_backward = adjacency_list.at(v).at(e_forward.reverse);
       prev_v = e_backward.dst;
@@ -437,4 +442,4 @@ void MaximizeLinearAssignment(
   }
 #endif
 }
-}  // namespace assignment_problem
+}  // namespace gnn_solver

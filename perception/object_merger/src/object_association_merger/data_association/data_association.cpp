@@ -12,18 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <object_association_merger/data_association.hpp>
-#include <object_association_merger/successive_shortest_path.hpp>
-#include <object_association_merger/utils/utils.hpp>
+#include "object_association_merger/data_association/data_association.hpp"
 
-#include <sensor_msgs/point_cloud2_iterator.hpp>
+#include "object_association_merger/data_association/solver/gnn_solver.hpp"
+#include "object_association_merger/utils/utils.hpp"
 
 #include <algorithm>
+#include <list>
+#include <memory>
 #include <unordered_map>
 #include <vector>
 #include <iostream>
 
-DataAssociation::DataAssociation() : score_threshold_(0.1)
+namespace
 {
   //初始化一个20x20矩阵,表明不同类别直接是否可以关联/assign
   can_assign_matrix_ = Eigen::MatrixXi::Identity(20, 20);
@@ -265,7 +266,7 @@ DataAssociation::DataAssociation() : score_threshold_(0.1)
     autoware_auto_perception_msgs::msg::ObjectClassification::PEDESTRIAN) = 0.001;
 }
 
-bool DataAssociation::assign(
+void DataAssociation::assign(
   const Eigen::MatrixXd & src, std::unordered_map<int, int> & direct_assignment,
   std::unordered_map<int, int> & reverse_assignment)
 {
@@ -278,7 +279,7 @@ bool DataAssociation::assign(
     }
   }
   // Solve
-  assignment_problem::MaximizeLinearAssignment(score, &direct_assignment, &reverse_assignment);
+  gnn_solver_ptr_->maximizeLinearAssignment(score, &direct_assignment, &reverse_assignment);
 
   // std::cout<<"direct_assignment:"<<std::endl;
   // for(auto v : direct_assignment)
@@ -310,12 +311,11 @@ bool DataAssociation::assign(
       ++itr;
     }
   }
-  return true;
 }
 
 Eigen::MatrixXd DataAssociation::calcScoreMatrix(
-  const autoware_auto_perception_msgs::msg::DetectedObjects & object0,
-  const autoware_auto_perception_msgs::msg::DetectedObjects & object1)
+  const autoware_auto_perception_msgs::msg::DetectedObjects & objects0,
+  const autoware_auto_perception_msgs::msg::DetectedObjects & objects1)
 {
   /*
   比如obj0 size:3,obj1 size:7.形成一个7 x 3矩阵.相似类别才可以去计算score.
@@ -356,22 +356,20 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
   }
   
   Eigen::MatrixXd score_matrix =
-    Eigen::MatrixXd::Zero(object1.objects.size(), object0.objects.size());
-  for (size_t object1_idx = 0; object1_idx < object1.objects.size(); ++object1_idx) {
-    for (size_t object0_idx = 0; object0_idx < object0.objects.size(); ++object0_idx) {
+    Eigen::MatrixXd::Zero(objects1.objects.size(), objects0.objects.size());
+  for (size_t objects1_idx = 0; objects1_idx < objects1.objects.size(); ++objects1_idx) {
+    const autoware_auto_perception_msgs::msg::DetectedObject & object1 =
+      objects1.objects.at(objects1_idx);
+    const std::uint8_t object1_label = utils::getHighestProbLabel(object1.classification);
+
+    for (size_t objects0_idx = 0; objects0_idx < objects0.objects.size(); ++objects0_idx) {
+      const autoware_auto_perception_msgs::msg::DetectedObject & object0 =
+        objects0.objects.at(objects0_idx);
+      const std::uint8_t object0_label = utils::getHighestProbLabel(object0.classification);
+
       double score = 0.0;
-      if (can_assign_matrix_(
-            object1.objects.at(object1_idx).classification.front().label,
-            object0.objects.at(object0_idx).classification.front().label)) {
-        const double max_dist = max_dist_matrix_(
-          object1.objects.at(object1_idx).classification.front().label,
-          object0.objects.at(object0_idx).classification.front().label);
-        const double max_area = max_area_matrix_(
-          object1.objects.at(object1_idx).classification.front().label,
-          object0.objects.at(object0_idx).classification.front().label);
-        const double min_area = min_area_matrix_(
-          object1.objects.at(object1_idx).classification.front().label,
-          object0.objects.at(object0_idx).classification.front().label);
+      if (can_assign_matrix_(object1_label, object0_label)) {
+        const double max_dist = max_dist_matrix_(object1_label, object0_label);
         const double dist = getDistance(
           object0.objects.at(object0_idx).kinematics.pose_with_covariance.pose.position,
           object1.objects.at(object1_idx).kinematics.pose_with_covariance.pose.position);
@@ -396,44 +394,24 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
                  <<",max_area:"<<max_area<<std::endl;
           score = 0.0;
         }
-        if (area1 < min_area || max_area < area1) {
-          score = 0.0;
+        // 2d iou gate
+        if (passed_gate) {
+          const double min_iou = min_iou_matrix_(object1_label, object0_label);
+          const double iou = utils::get2dIoU(
+            {object0.kinematics.pose_with_covariance.pose, object0.shape},
+            {object1.kinematics.pose_with_covariance.pose, object1.shape});
+          if (iou < min_iou) passed_gate = false;
+        }
+
+        // all gate is passed
+        if (passed_gate) {
+          score = (max_dist - std::min(dist, max_dist)) / max_dist;
+          if (score < score_threshold_) score = 0.0;
         }
       }
-      score_matrix(object1_idx, object0_idx) = score;
+      score_matrix(objects1_idx, objects0_idx) = score;
     }
   }
+
   return score_matrix;
-}
-
-double DataAssociation::getDistance(
-  const geometry_msgs::msg::Point & point0, const geometry_msgs::msg::Point & point1)
-{
-  const double diff_x = point1.x - point0.x;
-  const double diff_y = point1.y - point0.y;
-  // const double diff_z = point1.z - point0.z;
-  return std::sqrt(diff_x * diff_x + diff_y * diff_y);
-}
-
-geometry_msgs::msg::Point DataAssociation::getCentroid(
-  const sensor_msgs::msg::PointCloud2 & pointcloud)
-{
-  geometry_msgs::msg::Point centroid;
-  centroid.x = 0;
-  centroid.y = 0;
-  centroid.z = 0;
-  for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(pointcloud, "x"),
-       iter_y(pointcloud, "y"), iter_z(pointcloud, "z");
-       iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z) {
-    centroid.x += *iter_x;
-    centroid.y += *iter_y;
-    centroid.z += *iter_z;
-  }
-  centroid.x =
-    centroid.x / (static_cast<double>(pointcloud.height) * static_cast<double>(pointcloud.width));
-  centroid.y =
-    centroid.y / (static_cast<double>(pointcloud.height) * static_cast<double>(pointcloud.width));
-  centroid.z =
-    centroid.z / (static_cast<double>(pointcloud.height) * static_cast<double>(pointcloud.width));
-  return centroid;
 }

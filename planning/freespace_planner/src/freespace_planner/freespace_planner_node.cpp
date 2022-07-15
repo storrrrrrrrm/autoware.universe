@@ -141,7 +141,7 @@ Trajectory getPartialTrajectory(
 //计算pose和trajectory上最近的点的距离
 double calcDistance2d(const Trajectory & trajectory, const Pose & pose)
 {
-  const auto idx = tier4_autoware_utils::findNearestIndex(trajectory.points, pose.position);
+  const auto idx = motion_utils::findNearestIndex(trajectory.points, pose.position);
   return tier4_autoware_utils::calcDistance2d(trajectory.points.at(idx), pose);
 }
 
@@ -226,9 +226,9 @@ FreespacePlannerNode::FreespacePlannerNode(const rclcpp::NodeOptions & node_opti
     p.th_stopped_time_sec = declare_parameter("th_stopped_time_sec", 1.0);
     p.th_stopped_velocity_mps = declare_parameter("th_stopped_velocity_mps", 0.01);
     p.th_course_out_distance_m = declare_parameter("th_course_out_distance_m", 3.0);
+    p.vehicle_shape_margin_m = declare_parameter("vehicle_shape_margin_m", 1.0);
     p.replan_when_obstacle_found = declare_parameter("replan_when_obstacle_found", true);
     p.replan_when_course_out = declare_parameter("replan_when_course_out", true);
-    declare_parameter<bool>("is_completed", false);
   }
 
   // Planning
@@ -255,6 +255,7 @@ FreespacePlannerNode::FreespacePlannerNode(const rclcpp::NodeOptions & node_opti
     trajectory_pub_ = create_publisher<Trajectory>("~/output/trajectory", qos);
     debug_pose_array_pub_ = create_publisher<PoseArray>("~/debug/pose_array", qos);
     debug_partial_pose_array_pub_ = create_publisher<PoseArray>("~/debug/partial_pose_array", qos);
+    parking_state_pub_ = create_publisher<std_msgs::msg::Bool>("is_completed", qos);
   }
 
   // TF
@@ -313,8 +314,6 @@ void FreespacePlannerNode::getAstarParam()
 //设置目标终点
 void FreespacePlannerNode::onRoute(const HADMapRoute::ConstSharedPtr msg)
 {
-  if (scenario_ = nullptr) return;
-
   route_ = msg;
 
   goal_pose_.header = msg->header;
@@ -358,8 +357,8 @@ bool FreespacePlannerNode::isPlanRequired()
   if (node_param_.replan_when_obstacle_found) {
     algo_->setMap(*occupancy_grid_);
 
-    const size_t nearest_index_partial = tier4_autoware_utils::findNearestIndex(
-      partial_trajectory_.points, current_pose_.pose.position);
+    const size_t nearest_index_partial =
+      motion_utils::findNearestIndex(partial_trajectory_.points, current_pose_.pose.position);
     const size_t end_index_partial = partial_trajectory_.points.size() - 1;
 
     const auto forward_trajectory =
@@ -401,8 +400,10 @@ void FreespacePlannerNode::updateTargetIndex()
     if (new_target_index == target_index_) {
       // Finished publishing all partial trajectories
       is_completed_ = true;
-      this->set_parameter(rclcpp::Parameter("is_completed", true));
       RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "Freespace planning completed");
+      std_msgs::msg::Bool is_completed_msg;
+      is_completed_msg.data = is_completed_;
+      parking_state_pub_->publish(is_completed_msg);
     } else {
       // Switch to next partial trajectory
       prev_target_index_ = target_index_;
@@ -473,7 +474,7 @@ void FreespacePlannerNode::planTrajectory()
   // 先把车的形状做个扩展
   freespace_planning_algorithms::VehicleShape extended_vehicle_shape =
     planner_common_param_.vehicle_shape;
-  constexpr double margin = 1.0;
+  const double margin = node_param_.vehicle_shape_margin_m;
   extended_vehicle_shape.length += margin;
   extended_vehicle_shape.width += margin;
   extended_vehicle_shape.base2back += margin / 2;
@@ -517,7 +518,9 @@ void FreespacePlannerNode::reset()
   trajectory_ = Trajectory();
   partial_trajectory_ = Trajectory();
   is_completed_ = false;
-  this->set_parameter(rclcpp::Parameter("is_completed", false));
+  std_msgs::msg::Bool is_completed_msg;
+  is_completed_msg.data = is_completed_;
+  parking_state_pub_->publish(is_completed_msg);
 }
 
 TransformStamped FreespacePlannerNode::getTransform(
