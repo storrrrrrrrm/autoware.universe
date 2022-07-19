@@ -57,6 +57,11 @@ TensorrtYoloNodelet::TensorrtYoloNodelet(const rclcpp::NodeOptions & options)
     "anchors", std::vector<double>{
                  10, 13, 16, 30, 33, 23, 30, 61, 62, 45, 59, 119, 116, 90, 156, 198, 373, 326});
   std::vector<float> anchors_float(anchors.begin(), anchors.end());
+  for(auto a : anchors_float)
+  {
+    std::cout<<a<<std::endl;
+  }
+
   yolo_config_.anchors = anchors_float;
   auto scale_x_y = declare_parameter("scale_x_y", std::vector<double>{1.0, 1.0, 1.0});
   std::vector<float> scale_x_y_float(scale_x_y.begin(), scale_x_y.end());
@@ -113,6 +118,62 @@ TensorrtYoloNodelet::TensorrtYoloNodelet(const rclcpp::NodeOptions & options)
     std::make_unique<float[]>(net_ptr_->getMaxBatchSize() * net_ptr_->getMaxDetections() * 4);
   out_classes_ =
     std::make_unique<float[]>(net_ptr_->getMaxBatchSize() * net_ptr_->getMaxDetections());
+
+#if 1
+  cv::Mat img = cv::imread("/autoware/src/universe/autoware.universe/perception/tensorrt_yolo/data/test.png");
+  if (!net_ptr_->detect(
+        img, out_scores_.get(), out_boxes_.get(), out_classes_.get())) {
+    RCLCPP_WARN(this->get_logger(), "Fail to inference");
+    return;
+  }
+  using Label = autoware_auto_perception_msgs::msg::ObjectClassification;
+  tier4_perception_msgs::msg::DetectedObjectsWithFeature out_objects;
+  const auto width = img.cols;
+  const auto height = img.rows;
+
+  yolo_config_.print_config();
+
+  for (int i = 0; i < yolo_config_.detections_per_im; ++i) {
+    if (out_scores_[i] < yolo_config_.ignore_thresh) {
+      break;
+    }
+    tier4_perception_msgs::msg::DetectedObjectWithFeature object;
+    object.feature.roi.x_offset = out_boxes_[4 * i] * width;
+    object.feature.roi.y_offset = out_boxes_[4 * i + 1] * height;
+    object.feature.roi.width = out_boxes_[4 * i + 2] * width;
+    object.feature.roi.height = out_boxes_[4 * i + 3] * height;
+    object.object.classification.emplace_back(autoware_auto_perception_msgs::build<Label>()
+                                                .label(Label::UNKNOWN)
+                                                .probability(out_scores_[i]));
+    const auto class_id = static_cast<int>(out_classes_[i]);
+    if (labels_[class_id] == "car") {
+      object.object.classification.front().label = Label::CAR;
+    } else if (labels_[class_id] == "person") {
+      object.object.classification.front().label = Label::PEDESTRIAN;
+    } else if (labels_[class_id] == "bus") {
+      object.object.classification.front().label = Label::BUS;
+    } else if (labels_[class_id] == "truck") {
+      object.object.classification.front().label = Label::TRUCK;
+    } else if (labels_[class_id] == "bicycle") {
+      object.object.classification.front().label = Label::BICYCLE;
+    } else if (labels_[class_id] == "motorbike") {
+      object.object.classification.front().label = Label::MOTORCYCLE;
+    } else {
+      object.object.classification.front().label = Label::UNKNOWN;
+    }
+    out_objects.feature_objects.push_back(object);
+    const auto left = std::max(0, static_cast<int>(object.feature.roi.x_offset));
+    const auto top = std::max(0, static_cast<int>(object.feature.roi.y_offset));
+    const auto right =
+      std::min(static_cast<int>(object.feature.roi.x_offset + object.feature.roi.width), width);
+    const auto bottom =
+      std::min(static_cast<int>(object.feature.roi.y_offset + object.feature.roi.height), height);
+    cv::rectangle(
+      img, cv::Point(left, top), cv::Point(right, bottom), cv::Scalar(0, 0, 255), 3,
+      8, 0);
+  }
+  cv::imwrite("/autoware/src/universe/autoware.universe/perception/tensorrt_yolo/data/result.png",img);
+#endif
 }
 
 void TensorrtYoloNodelet::connectCb()

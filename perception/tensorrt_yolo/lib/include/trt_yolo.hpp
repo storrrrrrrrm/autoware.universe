@@ -93,6 +93,30 @@ struct Config
   int detections_per_im;
   bool use_darknet_layer;
   float ignore_thresh;
+
+  void print_config()
+  {
+    std::cout<<"num_anchors="<<num_anchors<<std::endl;
+    std::cout<<"score_thresh="<<score_thresh<<std::endl;
+    std::cout<<"iou_thresh="<<iou_thresh<<std::endl;
+    std::cout<<"detections_per_im="<<detections_per_im<<std::endl;
+    std::cout<<"use_darknet_layer="<<use_darknet_layer<<std::endl;
+    std::cout<<"ignore_thresh="<<ignore_thresh<<std::endl;
+
+    std::cout<<"anchors:"<<std::endl;
+    for(auto a : anchors)
+    {
+      std::cout<<a<<",";
+    }
+
+    std::cout<<"scale_x_y:"<<std::endl;
+    for(auto a : scale_x_y)
+    {
+      std::cout<<a<<",";
+    }
+    std::cout<<__LINE__<<std::endl;
+
+  }
 };
 
 class Net
