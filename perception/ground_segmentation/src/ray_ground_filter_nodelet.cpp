@@ -226,8 +226,8 @@ void RayGroundFilterComponent::ClassifyPointCloud(
         }
       }
 
-      bool old_prev_ground = prev_ground;
-      float old_prev_height = prev_height;
+      // bool old_prev_ground = prev_ground;
+      // float old_prev_height = prev_height;
 
       //平面上两点之间的距离
       float points_distance = in_radial_ordered_clouds[i][j].radius - prev_radius;
@@ -307,15 +307,15 @@ void RayGroundFilterComponent::ClassifyPointCloud(
       // if( (current_height < 0.3) && (current_ground == false) )
       if(j==0 || ((current_height < 0.3) && (current_ground == false)))
       {
-          std::cout<<"j:"<<j<<std::endl;
-          std::cout<<"old_prev_ground:"<<old_prev_ground<<std::endl;
-          std::cout<<"prev_height:"<<old_prev_height<<std::endl;
-          std::cout<<"points_distance:"<<points_distance<<std::endl;
-          auto p = in_radial_ordered_clouds[i][j].point;
-          std::cout<<"p.x="<<p.x<<",p.y="<<p.y<<",p.z="<<p.z<<std::endl;
-          std::cout<<"current_height="<<current_height<<std::endl;
-          std::cout<<"general_height_threshold="<<general_height_threshold<<std::endl;
-          std::cout<<"height_threshold="<<height_threshold<<std::endl;
+          // std::cout<<"j:"<<j<<std::endl;
+          // std::cout<<"old_prev_ground:"<<old_prev_ground<<std::endl;
+          // std::cout<<"prev_height:"<<old_prev_height<<std::endl;
+          // std::cout<<"points_distance:"<<points_distance<<std::endl;
+          // auto p = in_radial_ordered_clouds[i][j].point;
+          // std::cout<<"p.x="<<p.x<<",p.y="<<p.y<<",p.z="<<p.z<<std::endl;
+          // std::cout<<"current_height="<<current_height<<std::endl;
+          // std::cout<<"general_height_threshold="<<general_height_threshold<<std::endl;
+          // std::cout<<"height_threshold="<<height_threshold<<std::endl;
           std::cout<<"condition="<<condition<<std::endl;
       }
     }
