@@ -60,6 +60,7 @@ RayGroundFilterComponent::RayGroundFilterComponent(const rclcpp::NodeOptions & o
 
     use_vehicle_footprint_ = declare_parameter("use_vehicle_footprint", false);
 
+    z_offset_ = declare_parameter("z_offset", 0.0);
     base_frame_ = declare_parameter("base_frame", "base_link");
     general_max_slope_ = declare_parameter("general_max_slope", 8.0);
     local_max_slope_ = declare_parameter("local_max_slope", 6.0);
@@ -225,12 +226,16 @@ void RayGroundFilterComponent::ClassifyPointCloud(
         }
       }
 
+      bool old_prev_ground = prev_ground;
+      float old_prev_height = prev_height;
+
       //平面上两点之间的距离
       float points_distance = in_radial_ordered_clouds[i][j].radius - prev_radius;
       //两个点之间的最大可能高度差(这个应该和雷达的线束间隔角度有关). 前提:认为两个相邻点连线与水平面上的射线的角度不应该超过local_max_slope
       float height_threshold = tan(DEG2RAD(local_max_slope)) * points_distance;
       //当前点的实际z值
       float current_height = in_radial_ordered_clouds[i][j].point.z;
+      current_height = current_height + z_offset_;
       //理论上在坡度为general_max_slope_的地面上,radius处的点的最大z值
       // std::cout<<"general_max_slope_:"<<general_max_slope_<<std::endl;
       float general_height_threshold =
@@ -246,7 +251,9 @@ void RayGroundFilterComponent::ClassifyPointCloud(
       // only check points which radius is larger than the concentric_divider
       if (points_distance < concentric_divider_distance_) {
         current_ground = prev_ground;
-      } else {
+      } 
+      else 
+      {
         // check current point height against the LOCAL threshold (previous point)
         if (
           //认为相邻两点的最大高度差为height_threshold 所以判断是不是有效的相邻点
@@ -277,7 +284,8 @@ void RayGroundFilterComponent::ClassifyPointCloud(
              current_height >= -general_height_threshold)) {
             condition = 3;
             current_ground = true;
-          } else {
+          } else 
+          {
             condition = 4;
             current_ground = false;
           }
@@ -293,11 +301,16 @@ void RayGroundFilterComponent::ClassifyPointCloud(
       }
 
       prev_radius = in_radial_ordered_clouds[i][j].radius;
-      prev_height = in_radial_ordered_clouds[i][j].point.z;
+      prev_height = in_radial_ordered_clouds[i][j].point.z + z_offset_;
 
 //for debug
-      if( (current_height < -1.5) && (current_ground == false) )
+      // if( (current_height < 0.3) && (current_ground == false) )
+      if(j==0 || ((current_height < 0.3) && (current_ground == false)))
       {
+          std::cout<<"j:"<<j<<std::endl;
+          std::cout<<"old_prev_ground:"<<old_prev_ground<<std::endl;
+          std::cout<<"prev_height:"<<old_prev_height<<std::endl;
+          std::cout<<"points_distance:"<<points_distance<<std::endl;
           auto p = in_radial_ordered_clouds[i][j].point;
           std::cout<<"p.x="<<p.x<<",p.y="<<p.y<<",p.z="<<p.z<<std::endl;
           std::cout<<"current_height="<<current_height<<std::endl;

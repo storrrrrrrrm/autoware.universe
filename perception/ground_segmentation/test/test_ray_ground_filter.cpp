@@ -65,7 +65,7 @@ public:
     t.transform.translation.z = 2;
 
     tf2::Quaternion q;
-    q.setRPY(0.0, 1.0, 0.0);
+    q.setRPY(0.0, 0.0, 0.0);
     t.transform.rotation.x = q.x();
     t.transform.rotation.y = q.y();
     t.transform.rotation.z = q.z();
@@ -75,7 +75,73 @@ public:
   }
 };
 
-TEST_F(RayGroundFilterComponentTestSuite, TestCase1)
+// TEST_F(RayGroundFilterComponentTestSuite, TestCase1)
+// {
+//     //read pcd to pointcloud
+//     const auto share_dir = ament_index_cpp::get_package_share_directory("ground_segmentation");
+//     const auto pcd_path = share_dir + "/data/test.pcd";
+//     pcl::PointCloud<pcl::PointXYZ> cloud;
+//     pcl::io::loadPCDFile<pcl::PointXYZ>(pcd_path, cloud);
+//     sensor_msgs::msg::PointCloud2::SharedPtr input_msg_ptr(new sensor_msgs::msg::PointCloud2);
+//     pcl::toROSMsg(cloud, *input_msg_ptr);
+//     input_msg_ptr->header.frame_id="velodyne_top";
+    
+//     rclcpp::NodeOptions node_options;
+//     std::vector<rclcpp::Parameter> parameters;
+//     parameters.emplace_back(rclcpp::Parameter("base_frame", "base_link"));
+//     parameters.emplace_back(rclcpp::Parameter("general_max_slope", 2.0));
+//     parameters.emplace_back(rclcpp::Parameter("local_max_slope", 3.0));
+//     parameters.emplace_back(rclcpp::Parameter("initial_max_slope", 1.0));
+//     node_options.parameter_overrides(parameters);
+//     auto ray_ground_filter_test = std::make_shared<RayGroundFilterComponentTest>(node_options);
+//     ray_ground_filter_test->input_pointcloud_pub_->publish(*input_msg_ptr);
+    
+//     //send tf 
+//     ray_ground_filter_test->send_tf();
+
+//     //set filter parameter
+//     // ray_ground_filter_test->set_parameter(rclcpp::Parameter("base_frame", "velodyne_top"));
+//     // ray_ground_filter_test->set_parameter(rclcpp::Parameter("general_max_slope", 0));
+//     // ray_ground_filter_test->set_parameter(rclcpp::Parameter("local_max_slope", 0));
+//     // ray_ground_filter_test->set_parameter(rclcpp::Parameter("initial_max_slope", 0));
+//     // ray_ground_filter_test->set_parameter(rclcpp::Parameter("min_height_threshold", 0.));
+//     // ray_ground_filter_test->set_parameter(rclcpp::Parameter("min_height_threshold", 0.1));
+
+//     //     local_max_slope_ = declare_parameter("local_max_slope", 6.0);
+//     // initial_max_slope_ = declare_parameter("initial_max_slope", 3.0);
+//     // radial_divider_angle_ = declare_parameter("radial_divider_angle", 1.0);
+//     // min_height_threshold_ = declare_parameter("min_height_threshold", 0.15);
+//     // concentric_divider_distance_ = declare_parameter("concentric_divider_distance", 0.0);
+//     // reclass_distance_threshold_ = declare_parameter("reclass_distance_threshold", 0.1);
+
+//     sensor_msgs::msg::PointCloud2 out_cloud;
+//     ray_ground_filter_test->filter(input_msg_ptr,nullptr,out_cloud);
+//     ray_ground_filter_test->output_pointcloud_pub_->publish(out_cloud);
+
+//     //check out_cloud
+//     int effect_num = 0;
+//     int total_num = 0;
+//     // const float ground_point_z = -1.8;
+//     for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(out_cloud, "x"),
+//          iter_y(out_cloud, "y"), iter_z(out_cloud, "z");
+//          iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z)
+//     {
+//         const float z = *iter_z;
+//         // std::cout<<"z="<<z<<std::endl;
+//         total_num += 1;
+//         if (z < -1.5)
+//         {
+//           effect_num += 1;
+//         }
+//     }
+
+//     const float percent = 1.0 * effect_num/total_num;
+//     std::cout<<"effect_num="<<effect_num<<",total_num="<<total_num
+//           <<",percentage:"<<percent<<std::endl;
+//     EXPECT_GE(percent,0.9);
+// }
+
+TEST_F(RayGroundFilterComponentTestSuite, TestCase2)
 {
     //read pcd to pointcloud
     const auto share_dir = ament_index_cpp::get_package_share_directory("ground_segmentation");
@@ -88,7 +154,8 @@ TEST_F(RayGroundFilterComponentTestSuite, TestCase1)
     
     rclcpp::NodeOptions node_options;
     std::vector<rclcpp::Parameter> parameters;
-    parameters.emplace_back(rclcpp::Parameter("base_frame", "base_link"));
+    parameters.emplace_back(rclcpp::Parameter("base_frame", "velodyne_top"));
+    parameters.emplace_back(rclcpp::Parameter("z_offset", 2.0));
     parameters.emplace_back(rclcpp::Parameter("general_max_slope", 2.0));
     parameters.emplace_back(rclcpp::Parameter("local_max_slope", 3.0));
     parameters.emplace_back(rclcpp::Parameter("initial_max_slope", 1.0));
@@ -96,24 +163,6 @@ TEST_F(RayGroundFilterComponentTestSuite, TestCase1)
     auto ray_ground_filter_test = std::make_shared<RayGroundFilterComponentTest>(node_options);
     ray_ground_filter_test->input_pointcloud_pub_->publish(*input_msg_ptr);
     
-    //send tf 
-    ray_ground_filter_test->send_tf();
-
-    //set filter parameter
-    // ray_ground_filter_test->set_parameter(rclcpp::Parameter("base_frame", "velodyne_top"));
-    // ray_ground_filter_test->set_parameter(rclcpp::Parameter("general_max_slope", 0));
-    // ray_ground_filter_test->set_parameter(rclcpp::Parameter("local_max_slope", 0));
-    // ray_ground_filter_test->set_parameter(rclcpp::Parameter("initial_max_slope", 0));
-    // ray_ground_filter_test->set_parameter(rclcpp::Parameter("min_height_threshold", 0.));
-    // ray_ground_filter_test->set_parameter(rclcpp::Parameter("min_height_threshold", 0.1));
-
-    //     local_max_slope_ = declare_parameter("local_max_slope", 6.0);
-    // initial_max_slope_ = declare_parameter("initial_max_slope", 3.0);
-    // radial_divider_angle_ = declare_parameter("radial_divider_angle", 1.0);
-    // min_height_threshold_ = declare_parameter("min_height_threshold", 0.15);
-    // concentric_divider_distance_ = declare_parameter("concentric_divider_distance", 0.0);
-    // reclass_distance_threshold_ = declare_parameter("reclass_distance_threshold", 0.1);
-
     sensor_msgs::msg::PointCloud2 out_cloud;
     ray_ground_filter_test->filter(input_msg_ptr,nullptr,out_cloud);
     ray_ground_filter_test->output_pointcloud_pub_->publish(out_cloud);
