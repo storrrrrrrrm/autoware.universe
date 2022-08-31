@@ -94,9 +94,8 @@ public:
   };
 
   CrosswalkModule(
-    const int64_t module_id, const lanelet::ConstLanelet & crosswalk,
-    const PlannerParam & planner_param, const rclcpp::Logger logger,
-    const rclcpp::Clock::SharedPtr clock);
+    const int64_t module_id, lanelet::ConstLanelet crosswalk, const PlannerParam & planner_param,
+    const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock);
 
   bool modifyPathVelocity(PathWithLaneId * path, StopReason * stop_reason) override;
 
@@ -106,11 +105,11 @@ public:
 private:
   int64_t module_id_;
 
-  boost::optional<std::pair<size_t, PathPointWithLaneId>> findRTCStopPoint(
-    const PathWithLaneId & ego_path);
+  boost::optional<geometry_msgs::msg::Point> findRTCStopPoint(
+    const PathWithLaneId & ego_path, StopFactor & stop_factor);
 
-  boost::optional<std::pair<size_t, PathPointWithLaneId>> findNearestStopPoint(
-    const PathWithLaneId & ego_path, StopReason & stop_reason);
+  boost::optional<geometry_msgs::msg::Point> findNearestStopPoint(
+    const PathWithLaneId & ego_path, StopFactor & stop_factor);
 
   boost::optional<std::pair<double, geometry_msgs::msg::Point>> getStopLine(
     const PathWithLaneId & ego_path) const;
@@ -121,8 +120,8 @@ private:
 
   std::pair<double, double> getAttentionRange(const PathWithLaneId & ego_path);
 
-  void insertDecelPoint(
-    const std::pair<size_t, PathPointWithLaneId> & stop_point, const float target_velocity,
+  void insertDecelPointWithDebugInfo(
+    const geometry_msgs::msg::Point & stop_point, const float target_velocity,
     PathWithLaneId & output);
 
   void clampAttentionRangeByNeighborCrosswalks(
@@ -136,23 +135,23 @@ private:
   CollisionPointState getCollisionPointState(const double ttc, const double ttv) const;
 
   float calcTargetVelocity(
-    const PathPointWithLaneId & stop_point, const PathWithLaneId & ego_path) const;
+    const geometry_msgs::msg::Point & stop_point, const PathWithLaneId & ego_path) const;
 
   bool isStuckVehicle(const PathWithLaneId & ego_path, const PredictedObject & object) const;
 
   bool isRedSignalForPedestrians() const;
 
-  bool isVehicle(const PredictedObject & object) const;
+  static bool isVehicle(const PredictedObject & object);
 
   bool isTargetType(const PredictedObject & object) const;
 
   bool isTargetExternalInputStatus(const int target_status) const;
 
-  geometry_msgs::msg::Polygon createObjectPolygon(
-    const double width_m, const double length_m) const;
+  static geometry_msgs::msg::Polygon createObjectPolygon(
+    const double width_m, const double length_m);
 
-  geometry_msgs::msg::Polygon createVehiclePolygon(
-    const vehicle_info_util::VehicleInfo & vehicle_info) const;
+  static geometry_msgs::msg::Polygon createVehiclePolygon(
+    const vehicle_info_util::VehicleInfo & vehicle_info);
 
   lanelet::ConstLanelet crosswalk_;
 
