@@ -101,6 +101,10 @@ bool LidarApolloInstanceSegmentation::transformCloud(
   const sensor_msgs::msg::PointCloud2 & input, sensor_msgs::msg::PointCloud2 & transformed_cloud,
   float z_offset)
 {
+  auto start =  std::chrono::system_clock::now();
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double,std::milli> elapsed_seconds;
+  
   // TODO(mitsudome-r): remove conversion once pcl_ros transform are available.
   pcl::PointCloud<pcl::PointXYZI> pcl_input, pcl_transformed_cloud;
   pcl::fromROSMsg(input, pcl_input);
@@ -125,10 +129,16 @@ bool LidarApolloInstanceSegmentation::transformCloud(
   }
 
   // move pointcloud z_offset in z axis
+  start =  std::chrono::system_clock::now();
+
   pcl::PointCloud<pcl::PointXYZI> pointcloud_with_z_offset;
   Eigen::Affine3f z_up_translation(Eigen::Translation3f(0, 0, z_offset));
   Eigen::Matrix4f z_up_transform = z_up_translation.matrix();
   pcl::transformPointCloud(pcl_transformed_cloud, pcl_transformed_cloud, z_up_transform);
+
+  end = std::chrono::system_clock::now();
+  elapsed_seconds = end-start;
+  std::cout << "cloud move z milli seconds:"<<elapsed_seconds.count()<<std::endl; 
 
   pcl::toROSMsg(pcl_transformed_cloud, transformed_cloud);
 
@@ -139,9 +149,17 @@ bool LidarApolloInstanceSegmentation::detectDynamicObjects(
   const sensor_msgs::msg::PointCloud2 & input,
   tier4_perception_msgs::msg::DetectedObjectsWithFeature & output)
 {
+  auto start =  std::chrono::system_clock::now();
+  auto end = std::chrono::system_clock::now();
+  std::chrono::duration<double,std::milli> elapsed_seconds;
+
   // move up pointcloud z_offset in z axis
   sensor_msgs::msg::PointCloud2 transformed_cloud;
   transformCloud(input, transformed_cloud, z_offset_);
+
+  end = std::chrono::system_clock::now();
+  elapsed_seconds = end-start;
+  std::cout << "cloud trans milli seconds:"<<elapsed_seconds.count()<<std::endl; 
 
   // convert from ros to pcl
   pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_pointcloud_raw_ptr(new pcl::PointCloud<pcl::PointXYZI>);
