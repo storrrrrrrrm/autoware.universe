@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__BEHAVIOR_VELOCITY_PLANNER_COMMON__UTILIZATION__BOOST_GEOMETRY_HELPER_HPP_
 #define AUTOWARE__BEHAVIOR_VELOCITY_PLANNER_COMMON__UTILIZATION__BOOST_GEOMETRY_HELPER_HPP_
 
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_point_with_lane_id.hpp>
 #include <autoware_planning_msgs/msg/path_point.hpp>
@@ -50,9 +50,9 @@ namespace autoware::behavior_velocity_planner
 {
 namespace bg = boost::geometry;
 
-using Point2d = autoware::universe_utils::Point2d;
-using LineString2d = autoware::universe_utils::LineString2d;
-using Polygon2d = autoware::universe_utils::Polygon2d;
+using Point2d = autoware_utils::Point2d;
+using LineString2d = autoware_utils::LineString2d;
+using Polygon2d = autoware_utils::Polygon2d;
 
 template <class T>
 Point2d to_bg2d(const T & p)
@@ -72,7 +72,7 @@ LineString2d to_bg2d(const std::vector<T> & vec)
 
 Polygon2d lines2polygon(const LineString2d & left_line, const LineString2d & right_line);
 
-Polygon2d upScalePolygon(
+Polygon2d up_scale_polygon(
   const geometry_msgs::msg::Point & position, const Polygon2d & polygon, const double scale);
 
 geometry_msgs::msg::Polygon toGeomPoly(const Polygon2d & polygon);

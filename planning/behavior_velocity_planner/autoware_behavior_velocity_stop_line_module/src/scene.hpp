@@ -71,11 +71,11 @@ public:
     const int64_t module_id, lanelet::ConstLineString3d stop_line,
     const PlannerParam & planner_param, const rclcpp::Logger & logger,
     const rclcpp::Clock::SharedPtr clock,
-    const std::shared_ptr<universe_utils::TimeKeeper> & time_keeper,
+    const std::shared_ptr<autoware_utils::TimeKeeper> & time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface> &
       planning_factor_interface);
 
-  bool modifyPathVelocity(PathWithLaneId * path) override;
+  bool modify_path_velocity(PathWithLaneId * path) override;
 
   /**
    * @brief Calculate ego position and stop point.
@@ -84,7 +84,7 @@ public:
    * @param state Current state of the stop line module.
    * @return Pair of ego position and optional stop point.
    */
-  std::pair<double, std::optional<double>> getEgoAndStopPoint(
+  std::pair<double, std::optional<double>> get_ego_and_stop_point(
     const Trajectory & trajectory, const geometry_msgs::msg::Pose & ego_pose,
     const State & state) const;
 
@@ -96,18 +96,18 @@ public:
    * @param distance_to_stop_point Distance to the stop point.
    * @param is_vehicle_stopped Flag indicating if the vehicle is stopped.
    */
-  void updateStateAndStoppedTime(
+  void update_state_and_stopped_time(
     State * state, std::optional<rclcpp::Time> * stopped_time, const rclcpp::Time & now,
     const double & distance_to_stop_point, const bool & is_vehicle_stopped) const;
 
-  void updateDebugData(
+  void update_debug_data(
     DebugData * debug_data, const geometry_msgs::msg::Pose & stop_pose, const State & state) const;
 
-  visualization_msgs::msg::MarkerArray createDebugMarkerArray() override
+  visualization_msgs::msg::MarkerArray create_debug_marker_array() override
   {
     return visualization_msgs::msg::MarkerArray{};
   }
-  autoware::motion_utils::VirtualWalls createVirtualWalls() override;
+  autoware::motion_utils::VirtualWalls create_virtual_walls() override;
 
 private:
   const lanelet::ConstLineString3d stop_line_;  ///< Stop line geometry.

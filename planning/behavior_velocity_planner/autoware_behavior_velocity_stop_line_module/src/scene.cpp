@@ -32,7 +32,7 @@ namespace autoware::behavior_velocity_planner
 StopLineModule::StopLineModule(
   const int64_t module_id, lanelet::ConstLineString3d stop_line, const PlannerParam & planner_param,
   const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock,
-  const std::shared_ptr<universe_utils::TimeKeeper> & time_keeper,
+  const std::shared_ptr<autoware_utils::TimeKeeper> & time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface> &
     planning_factor_interface)
 : SceneModuleInterface(module_id, logger, clock, time_keeper, planning_factor_interface),
@@ -43,7 +43,7 @@ StopLineModule::StopLineModule(
 {
 }
 
-bool StopLineModule::modifyPathVelocity(PathWithLaneId * path)
+bool StopLineModule::modify_path_velocity(PathWithLaneId * path)
 {
   auto trajectory =
     trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>::Builder{}
@@ -54,7 +54,7 @@ bool StopLineModule::modifyPathVelocity(PathWithLaneId * path)
   }
 
   auto [ego_s, stop_point] =
-    getEgoAndStopPoint(*trajectory, planner_data_->current_odometry->pose, state_);
+    get_ego_and_stop_point(*trajectory, planner_data_->current_odometry->pose, state_);
 
   if (!stop_point) {
     return true;
@@ -71,17 +71,18 @@ bool StopLineModule::modifyPathVelocity(PathWithLaneId * path)
     tier4_planning_msgs::msg::PlanningFactor::STOP, tier4_planning_msgs::msg::SafetyFactorArray{},
     true /*is_driving_forward*/, 0.0, 0.0 /*shift distance*/, "stopline");
 
-  updateStateAndStoppedTime(
-    &state_, &stopped_time_, clock_->now(), *stop_point - ego_s, planner_data_->isVehicleStopped());
+  update_state_and_stopped_time(
+    &state_, &stopped_time_, clock_->now(), *stop_point - ego_s,
+    planner_data_->is_vehicle_stopped());
 
   geometry_msgs::msg::Pose stop_pose = trajectory->compute(*stop_point).point.pose;
 
-  updateDebugData(&debug_data_, stop_pose, state_);
+  update_debug_data(&debug_data_, stop_pose, state_);
 
   return true;
 }
 
-std::pair<double, std::optional<double>> StopLineModule::getEgoAndStopPoint(
+std::pair<double, std::optional<double>> StopLineModule::get_ego_and_stop_point(
   const Trajectory & trajectory, const geometry_msgs::msg::Pose & ego_pose,
   const State & state) const
 {
@@ -91,7 +92,7 @@ std::pair<double, std::optional<double>> StopLineModule::getEgoAndStopPoint(
   switch (state) {
     case State::APPROACH: {
       const double base_link2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
-      const LineString2d stop_line = planning_utils::extendLine(
+      const LineString2d stop_line = planning_utils::extend_line(
         stop_line_[0], stop_line_[1], planner_data_->stop_line_extend_length);
 
       // Calculate intersection with stop line
@@ -127,7 +128,7 @@ std::pair<double, std::optional<double>> StopLineModule::getEgoAndStopPoint(
   return {ego_s, stop_point_s};
 }
 
-void StopLineModule::updateStateAndStoppedTime(
+void StopLineModule::update_state_and_stopped_time(
   State * state, std::optional<rclcpp::Time> * stopped_time, const rclcpp::Time & now,
   const double & distance_to_stop_point, const bool & is_vehicle_stopped) const
 {
@@ -159,7 +160,7 @@ void StopLineModule::updateStateAndStoppedTime(
   }
 }
 
-void StopLineModule::updateDebugData(
+void StopLineModule::update_debug_data(
   DebugData * debug_data, const geometry_msgs::msg::Pose & stop_pose, const State & state) const
 {
   debug_data->base_link2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;

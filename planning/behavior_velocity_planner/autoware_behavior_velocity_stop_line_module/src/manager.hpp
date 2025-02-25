@@ -38,22 +38,23 @@ class StopLineModuleManager : public SceneModuleManagerInterface<>
 public:
   explicit StopLineModuleManager(rclcpp::Node & node);
 
-  const char * getModuleName() override { return "stop_line"; }
+  const char * get_module_name() override { return "stop_line"; }
 
 private:
   StopLineModule::PlannerParam planner_param_;
 
-  std::vector<StopLineWithLaneId> getStopLinesWithLaneIdOnPath(
+  std::vector<StopLineWithLaneId> get_stop_lines_with_lane_id_on_path(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
     const lanelet::LaneletMapPtr lanelet_map);
 
-  std::set<int64_t> getStopLineIdSetOnPath(
+  std::set<int64_t> get_stop_line_id_set_on_path(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
     const lanelet::LaneletMapPtr lanelet_map);
 
-  void launchNewModules(const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
+  void launch_new_modules(
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
 
-  std::function<bool(const std::shared_ptr<SceneModuleInterface> &)> getModuleExpiredFunction(
+  std::function<bool(const std::shared_ptr<SceneModuleInterface> &)> get_module_expired_function(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
 };
 

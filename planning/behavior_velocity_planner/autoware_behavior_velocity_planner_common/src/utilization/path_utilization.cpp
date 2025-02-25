@@ -15,7 +15,7 @@
 #include <autoware/behavior_velocity_planner_common/utilization/path_utilization.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <algorithm>
@@ -23,7 +23,7 @@
 
 namespace autoware::behavior_velocity_planner
 {
-bool splineInterpolate(
+bool spline_interpolate(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & input, const double interval,
   autoware_internal_planning_msgs::msg::PathWithLaneId & output, const rclcpp::Logger & logger)
 {
@@ -45,7 +45,7 @@ bool splineInterpolate(
  * is the velocity of the closest point for the input "sub-path" which consists of the points before
  * the interpolated point.
  */
-autoware_planning_msgs::msg::Path interpolatePath(
+autoware_planning_msgs::msg::Path interpolate_path(
   const autoware_planning_msgs::msg::Path & path, const double length, const double interval)
 {
   const auto logger{rclcpp::get_logger("behavior_velocity_planner").get_child("path_utilization")};
@@ -77,7 +77,7 @@ autoware_planning_msgs::msg::Path interpolatePath(
       v.push_back(path_point.longitudinal_velocity_mps);
       if (idx != 0) {
         const auto path_point_prev = path.points.at(idx - 1);
-        s += autoware::universe_utils::calcDistance2d(path_point_prev.pose, path_point.pose);
+        s += autoware_utils::calc_distance2d(path_point_prev.pose, path_point.pose);
       }
       if (s > path_len) {
         break;
@@ -123,7 +123,7 @@ autoware_planning_msgs::msg::Path interpolatePath(
   return autoware::motion_utils::resamplePath(path, s_out);
 }
 
-autoware_planning_msgs::msg::Path filterLitterPathPoint(
+autoware_planning_msgs::msg::Path filter_litter_path_point(
   const autoware_planning_msgs::msg::Path & path)
 {
   autoware_planning_msgs::msg::Path filtered_path;
@@ -151,7 +151,7 @@ autoware_planning_msgs::msg::Path filterLitterPathPoint(
 
   return filtered_path;
 }
-autoware_planning_msgs::msg::Path filterStopPathPoint(
+autoware_planning_msgs::msg::Path filter_stop_path_point(
   const autoware_planning_msgs::msg::Path & path)
 {
   autoware_planning_msgs::msg::Path filtered_path = path;

@@ -16,7 +16,7 @@
 #define AUTOWARE__BEHAVIOR_VELOCITY_PLANNER_COMMON__UTILIZATION__ARC_LANE_UTIL_HPP_
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
@@ -29,7 +29,7 @@
 namespace autoware::behavior_velocity_planner
 {
 
-inline geometry_msgs::msg::Point convertToGeomPoint(const autoware::universe_utils::Point2d & p)
+inline geometry_msgs::msg::Point convert_to_geom_point(const autoware_utils::Point2d & p)
 {
   geometry_msgs::msg::Point geom_p;
   geom_p.x = p.x();
@@ -40,32 +40,30 @@ inline geometry_msgs::msg::Point convertToGeomPoint(const autoware::universe_uti
 
 namespace arc_lane_utils
 {
-using PathIndexWithPose = std::pair<size_t, geometry_msgs::msg::Pose>;  // front index, pose
-using PathIndexWithPoint2d =
-  std::pair<size_t, autoware::universe_utils::Point2d>;                   // front index, point2d
+using PathIndexWithPose = std::pair<size_t, geometry_msgs::msg::Pose>;    // front index, pose
+using PathIndexWithPoint2d = std::pair<size_t, autoware_utils::Point2d>;  // front index, point2d
 using PathIndexWithPoint = std::pair<size_t, geometry_msgs::msg::Point>;  // front index, point2d
 using PathIndexWithOffset = std::pair<size_t, double>;                    // front index, offset
 
-double calcSignedDistance(
+double calc_signed_distance(
   const geometry_msgs::msg::Pose & p1, const geometry_msgs::msg::Point & p2);
 
 // calculate one collision point between the line (from p1 to p2) and the line (from p3 to p4)
-std::optional<geometry_msgs::msg::Point> checkCollision(
+std::optional<geometry_msgs::msg::Point> check_collision(
   const geometry_msgs::msg::Point & p1, const geometry_msgs::msg::Point & p2,
   const geometry_msgs::msg::Point & p3, const geometry_msgs::msg::Point & p4);
 
 template <class T>
-std::optional<PathIndexWithPoint> findCollisionSegment(
+std::optional<PathIndexWithPoint> find_collision_segment(
   const T & path, const geometry_msgs::msg::Point & stop_line_p1,
   const geometry_msgs::msg::Point & stop_line_p2)
 {
   for (size_t i = 0; i < path.points.size() - 1; ++i) {
-    const auto & p1 =
-      autoware::universe_utils::getPoint(path.points.at(i));  // Point before collision point
+    const auto & p1 = autoware_utils::get_point(path.points.at(i));  // Point before collision point
     const auto & p2 =
-      autoware::universe_utils::getPoint(path.points.at(i + 1));  // Point after collision point
+      autoware_utils::get_point(path.points.at(i + 1));  // Point after collision point
 
-    const auto collision_point = checkCollision(p1, p2, stop_line_p1, stop_line_p2);
+    const auto collision_point = check_collision(p1, p2, stop_line_p1, stop_line_p2);
 
     if (collision_point) {
       return std::make_pair(i, collision_point.value());
@@ -76,23 +74,23 @@ std::optional<PathIndexWithPoint> findCollisionSegment(
 }
 
 template <class T>
-std::optional<PathIndexWithPoint> findCollisionSegment(
+std::optional<PathIndexWithPoint> find_collision_segment(
   const T & path, const LineString2d & stop_line)
 {
-  const auto stop_line_p1 = convertToGeomPoint(stop_line.at(0));
-  const auto stop_line_p2 = convertToGeomPoint(stop_line.at(1));
+  const auto stop_line_p1 = convert_to_geom_point(stop_line.at(0));
+  const auto stop_line_p2 = convert_to_geom_point(stop_line.at(1));
 
-  return findCollisionSegment(path, stop_line_p1, stop_line_p2);
+  return find_collision_segment(path, stop_line_p1, stop_line_p2);
 }
 
 template <class T>
-std::optional<PathIndexWithOffset> findForwardOffsetSegment(
+std::optional<PathIndexWithOffset> find_forward_offset_segment(
   const T & path, const size_t base_idx, const double offset_length)
 {
   double sum_length = 0.0;
   for (size_t i = base_idx; i < path.points.size() - 1; ++i) {
     const double segment_length =
-      autoware::universe_utils::calcDistance2d(path.points.at(i), path.points.at(i + 1));
+      autoware_utils::calc_distance2d(path.points.at(i), path.points.at(i + 1));
 
     // If it's over offset point, return front index and remain offset length
     /**
@@ -111,14 +109,13 @@ std::optional<PathIndexWithOffset> findForwardOffsetSegment(
 }
 
 template <class T>
-std::optional<PathIndexWithOffset> findBackwardOffsetSegment(
+std::optional<PathIndexWithOffset> find_backward_offset_segment(
   const T & path, const size_t base_idx, const double offset_length)
 {
   double sum_length = 0.0;
   const auto start = static_cast<std::int32_t>(base_idx) - 1;
   for (std::int32_t i = start; i >= 0; --i) {
-    sum_length +=
-      autoware::universe_utils::calcDistance2d(path.points.at(i), path.points.at(i + 1));
+    sum_length += autoware_utils::calc_distance2d(path.points.at(i), path.points.at(i + 1));
 
     // If it's over offset point, return front index and remain offset length
     /**
@@ -136,31 +133,32 @@ std::optional<PathIndexWithOffset> findBackwardOffsetSegment(
 }
 
 template <class T>
-std::optional<PathIndexWithOffset> findOffsetSegment(
+std::optional<PathIndexWithOffset> find_offset_segment(
   const T & path, const PathIndexWithPoint & collision_segment, const double offset_length)
 {
   const size_t collision_idx = collision_segment.first;
   const auto & collision_point = collision_segment.second;
 
   if (offset_length >= 0) {
-    return findForwardOffsetSegment(
+    return find_forward_offset_segment(
       path, collision_idx,
       offset_length +
-        autoware::universe_utils::calcDistance2d(path.points.at(collision_idx), collision_point));
+        autoware_utils::calc_distance2d(path.points.at(collision_idx), collision_point));
   }
 
-  return findBackwardOffsetSegment(
+  return find_backward_offset_segment(
     path, collision_idx + 1,
     -offset_length +
-      autoware::universe_utils::calcDistance2d(path.points.at(collision_idx + 1), collision_point));
+      autoware_utils::calc_distance2d(path.points.at(collision_idx + 1), collision_point));
 }
 
-std::optional<PathIndexWithOffset> findOffsetSegment(
+std::optional<PathIndexWithOffset> find_offset_segment(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t index,
   const double offset);
 
 template <class T>
-geometry_msgs::msg::Pose calcTargetPose(const T & path, const PathIndexWithOffset & offset_segment)
+geometry_msgs::msg::Pose calc_target_pose(
+  const T & path, const PathIndexWithOffset & offset_segment)
 {
   const size_t offset_idx = offset_segment.first;
   const double remain_offset_length = offset_segment.second;
@@ -186,12 +184,12 @@ geometry_msgs::msg::Pose calcTargetPose(const T & path, const PathIndexWithOffse
   target_pose.position.x = target_point_2d.x();
   target_pose.position.y = target_point_2d.y();
   target_pose.position.z = interpolated_z;
-  const double yaw = autoware::universe_utils::calcAzimuthAngle(p_front, p_back);
-  target_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(yaw);
+  const double yaw = autoware_utils::calc_azimuth_angle(p_front, p_back);
+  target_pose.orientation = autoware_utils::create_quaternion_from_yaw(yaw);
   return target_pose;
 }
 
-std::optional<PathIndexWithPose> createTargetPoint(
+std::optional<PathIndexWithPose> create_target_point(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const LineString2d & stop_line,
   const double margin, const double vehicle_offset);
 
